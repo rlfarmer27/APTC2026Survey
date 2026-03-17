@@ -1,0 +1,6 @@
+"0","#| label: grouped-prefix"
+"0",""
+"0","tibble(variable = names(dat)) %>%"
+"0","  mutate(prefix = str_extract(variable, ""^[^_]+"")) %>%"
+"0","  count(prefix, sort = TRUE) %>%"
+"0","  datatable()"

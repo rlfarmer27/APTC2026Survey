@@ -1,0 +1,8 @@
+"0",""
+"0","ggplot(pd_amount_dat, aes(x = PD_amount)) +"
+"0","  geom_histogram(binwidth = 500, fill = aptc_teal, color = ""white"", alpha = 0.9) +"
+"0","  geom_vline(xintercept = median(pd_amount_dat$PD_amount, na.rm = TRUE), color = aptc_coral, linetype = ""dashed"", linewidth = 1) +"
+"0","  scale_x_continuous(labels = dollar_format()) +"
+"0","  labs(title = ""Distribution of Professional Development Funding Amounts"", x = ""PD Funding (USD)"", y = ""Count"") +"
+"0","  theme_minimal(base_size = 13) +"
+"0","  theme(plot.title = element_text(face = ""bold"", color = aptc_navy))"

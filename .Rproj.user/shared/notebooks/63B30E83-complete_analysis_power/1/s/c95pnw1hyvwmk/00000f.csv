@@ -1,0 +1,42 @@
+"0","#| label: summary"
+"0","#| echo: false"
+"0","#| results: asis"
+"0",""
+"0","rec_n <- max(min_n_ecl, min_n_accept, min_n_comp, na.rm = TRUE)"
+"0",""
+"0","cat(sprintf("""
+"0","### Recommended Sample Size: N = %s"
+"0",""
+"0","This provides:"
+"0",""
+"0","- **≥80%% power** to detect moderate effects (d = 0.5) on ECL and Acceptability"
+"0","- **≥80%% power** to demonstrate non-inferiority on Comprehension (margin = 5%%)"
+"0",""
+"0","### Key Considerations"
+"0",""
+"0","1. **ECL and Acceptability** reach ceiling power quickly—even N = 150 is adequate for moderate effects"
+"0",""
+"0","2. **Comprehension non-inferiority** drives the sample size requirement with a 5%% margin"
+"0",""
+"0","3. **If condensed format is actually 2-3%% worse** (but still acceptable), you need larger N (~400-500) to demonstrate non-inferiority"
+"0",""
+"0","4. **A more lenient margin (7-10%%)** would substantially reduce required N"
+"0",""", rec_n))"
+"1","
+### Recommended Sample Size: N = 125
+
+This provides:
+
+- **≥80% power** to detect moderate effects (d = 0.5) on ECL and Acceptability
+- **≥80% power** to demonstrate non-inferiority on Comprehension (margin = 5%)
+
+### Key Considerations
+
+1. **ECL and Acceptability** reach ceiling power quickly—even N = 150 is adequate for moderate effects
+
+2. **Comprehension non-inferiority** drives the sample size requirement with a 5% margin
+
+3. **If condensed format is actually 2-3% worse** (but still acceptable), you need larger N (~400-500) to demonstrate non-inferiority
+
+4. **A more lenient margin (7-10%)** would substantially reduce required N
+"

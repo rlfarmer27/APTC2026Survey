@@ -1,0 +1,8 @@
+"0","#| label: survey-diagnostics"
+"0",""
+"0","dat %>%"
+"0","  summarise("
+"0","    mean_duration = mean(`Duration (in seconds)`, na.rm = TRUE),"
+"0","    median_duration = median(`Duration (in seconds)`, na.rm = TRUE),"
+"0","    pct_finished = mean(Finished == ""TRUE"", na.rm = TRUE) * 100"
+"0","  )"

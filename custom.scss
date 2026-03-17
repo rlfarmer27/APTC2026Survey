@@ -1,0 +1,106 @@
+/*-- scss:defaults --*/
+
+// APTC Brand Colors
+$aptc-navy: #252b3b;
+$aptc-coral: #ff6544;
+$aptc-teal: #31a8c0;
+
+// Theme colors
+$body-bg: #ffffff;
+$body-color: $aptc-navy;
+$link-color: $aptc-teal;
+$selection-bg: $aptc-teal;
+
+// Headings
+$presentation-heading-color: $aptc-navy;
+$presentation-heading-font: 'Georgia', serif;
+
+// Code
+$code-color: $aptc-coral;
+
+/*-- scss:defaults --*/
+// APTC Brand Colors
+$aptc-navy: #252b3b;
+$aptc-coral: #ff6544;
+$aptc-teal: #31a8c0;
+// Theme colors
+$body-bg: #ffffff;
+$body-color: $aptc-navy;
+$link-color: $aptc-teal;
+$selection-bg: $aptc-teal;
+// Headings
+$presentation-heading-color: $aptc-navy;
+$presentation-heading-font: 'Georgia', serif;
+// Base font size
+$presentation-font-size-root: 36px;
+// Code
+$code-color: $aptc-coral;
+/*-- scss:rules --*/
+.reveal .slides section {
+  text-align: left;
+}
+.reveal h1, .reveal h2, .reveal h3 {
+  color: $aptc-navy;
+  font-weight: bold;
+}
+.reveal h1 {
+  font-size: 2em;
+}
+.reveal h2 {
+  font-size: 1.5em;
+  border-bottom: 3px solid $aptc-teal;
+  padding-bottom: 0.3em;
+}
+.reveal h3 {
+  font-size: 1.1em;
+}
+.reveal .slides li {
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+.reveal .slide-background-content {
+  background-size: cover;
+}
+// Section title slides
+.reveal section[data-background-color="#252b3b"] h1,
+.reveal section[data-background-color="#252b3b"] h2 {
+  color: white;
+  border-bottom: 3px solid $aptc-coral;
+}
+// Callouts
+.callout {
+  border-left: 4px solid $aptc-teal;
+  background-color: rgba(49, 168, 192, 0.1);
+}
+.callout-note {
+  border-left-color: $aptc-teal;
+}
+.callout-tip {
+  border-left-color: $aptc-coral;
+  background-color: rgba(255, 101, 68, 0.1);
+}
+// Tables
+.reveal table {
+  font-size: 0.8em;
+}
+.reveal table th {
+  background-color: $aptc-navy;
+  color: white;
+}
+.reveal table tr:nth-child(even) {
+  background-color: rgba(49, 168, 192, 0.1);
+}
+// Footer
+.reveal .footer {
+  color: $aptc-navy;
+  font-size: 0.6em;
+}
+// Columns
+.reveal .columns {
+  gap: 2em;
+}
+// Notes styling
+.reveal .speaker-notes {
+  font-size: 1.2em;
+  line-height: 1.5;
+}

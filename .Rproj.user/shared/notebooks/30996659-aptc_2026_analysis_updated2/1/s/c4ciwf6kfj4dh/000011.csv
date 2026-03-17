@@ -1,0 +1,37 @@
+"0",""
+"0","high_missing <- missing_summary %>% filter(Percent_Missing > 20)"
+"0","if (nrow(high_missing) > 0) {"
+"0","  cat(""\n⚠️ WARNING: The following variables have >20% missing data:\n"")"
+"0","  print(high_missing %>% select(Variable, Percent_Missing))"
+"0","}"
+"1","
+⚠️ WARNING: The following variables have >20% missing data:
+"
+"1","[38;5;246m# A tibble: 11 × 2[39m
+"
+"1","   Variable            Percent_Missing
+"
+"1","   [3m[38;5;246m<chr>[39m[23m                         [3m[38;5;246m<dbl>[39m[23m
+"
+"1","[38;5;250m 1[39m ClinicRevenue                  38.3
+"
+"1","[38;5;250m 2[39m CoursesTaught                  35.8
+"
+"1","[38;5;250m 3[39m ClinicClientsCount             30  
+"
+"1","[38;5;250m 4[39m ClinicAge                      29.2
+"
+"1","[38;5;250m 5[39m ClinicSlidingScale             29.2
+"
+"1","[38;5;250m 6[39m MaxTraineeCount                26.7
+"
+"1","[38;5;250m 7[39m Telehealth                     25  
+"
+"1","[38;5;250m 8[39m EMRbinary                      24.2
+"
+"1","[38;5;250m 9[39m ResearchActive                 24.2
+"
+"1","[38;5;250m10[39m ClinicTotalTrainees            22.5
+"
+"1","[38;5;250m11[39m Rank                           21.7
+"

@@ -1,0 +1,962 @@
+---
+title: "Analysis Plan & Power Simulation: Report Format Comparison Study"
+author: "Analysis Document"
+date: today
+format: 
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    code-summary: "Show code"
+    theme: flatly
+    self-contained: true
+execute:
+  warning: false
+  message: false
+---
+
+# Part 1: Analysis Plan
+
+## Study Overview
+
+This study compares two psychoeducational report formats—traditional and condensed—using a between-subjects design. Participants are randomly assigned to read one report format and then complete measures assessing comprehension, cognitive load, and acceptability.
+
+### Research Questions
+
+1. Does report format affect how easily practitioners can extract information? (Cognitive load)
+2. Does report format affect comprehension of key clinical information? (Comprehension)
+3. Do practitioners find the condensed format acceptable for professional use? (Acceptability)
+
+### Hypotheses
+
+| DV | Hypothesis Type | Expectation |
+|----|-----------------|-------------|
+| ECL | Superiority | Condensed format reduces extraneous cognitive load |
+| Acceptability | Superiority | Formats may differ in perceived acceptability |
+| Comprehension | Non-inferiority | Condensed format is not meaningfully worse than traditional |
+
+## Measures
+
+### Manipulation Check
+
+**Intrinsic Cognitive Load (ICL)** — 2 items, 7-point Likert scale
+
+Confirms that perceived content complexity is equivalent across conditions. If formats differ on ICL, this indicates a potential confound.
+
+| Item | Wording |
+|------|---------|
+| ICL-1 | For this task, many things needed to be kept in mind simultaneously. |
+| ICL-2 | This task was very complex. |
+
+*Source: Klepsch et al. (2017)*
+
+### Primary Dependent Variables
+
+#### Extraneous Cognitive Load (ECL) — 3 items, 7-point Likert scale
+
+Assesses processing difficulty attributable to report design/format.
+
+| Item | Wording |
+|------|---------|
+| ECL-1 | It was exhausting to find the important information. |
+| ECL-2 | The design of this report made it difficult to extract key information. |
+| ECL-3 | It was difficult to recognize and link the crucial information. |
+
+*Note: Items adapted from Klepsch et al. (2017) for report-reading context.*
+
+#### Acceptability — 5 items, 7-point Likert scale (Strongly Disagree to Strongly Agree)
+
+Assesses adoption intention and professional endorsement.
+
+| Item | Construct | Wording |
+|------|-----------|---------|
+| ACC-1 | Personal adoption | I would use this report format in my own practice. |
+| ACC-2 | Recommendation | I would recommend this report format to a colleague. |
+| ACC-3 | Role adequacy | This report format meets the documentation needs of my role. |
+| ACC-4 | Defensibility | I would feel confident defending this report format if questioned by an administrator, attorney, or parent. |
+| ACC-5 | Training endorsement | I would teach this report format to a trainee as an acceptable model. |
+
+#### Comprehension — 7 multiple choice items
+
+Assesses whether the format successfully communicated clinically relevant information including diagnosis, recommendations, and supports.
+
+## Statistical Analysis Plan
+
+### Analysis Summary
+
+| DV | Data Type | Hypothesis | Analysis |
+|----|-----------|------------|----------|
+| ICL | Ordinal (2 items) | Equivalence check | t-test on mean |
+| ECL | Ordinal (3 items) | Superiority | CLMM |
+| Acceptability | Ordinal (5 items) | Superiority | CLMM + CFA |
+| Comprehension | Binary (7 items) | Non-inferiority | Proportion test with NI margin |
+
+### Detailed Specifications
+
+#### 1. Intrinsic Cognitive Load (Manipulation Check)
+
+**Method:** Independent samples t-test on 2-item mean
+
+**Decision rule:** If conditions differ significantly on ICL (p < .05), this constitutes a potential confound requiring interpretive caution.
+
+#### 2. Extraneous Cognitive Load (Superiority)
+
+**Method:** Cumulative link mixed model (CLMM)
+
+```r
+clmm(response ~ condition + item + (1 | participant), 
+     data = ecl_data, link = "logit")
+```
+
+**Rationale:** Respects ordinal nature of Likert responses. Mixed model accounts for non-independence of items within participant.
+
+#### 3. Acceptability (Superiority)
+
+**Primary analysis:** Cumulative link mixed model (CLMM)
+
+```r
+clmm(response ~ condition + item + condition:item + (1 | participant), 
+     data = accept_data, link = "logit")
+```
+
+**Secondary analysis (conditional):**
+
+1. CFA testing single-factor structure (CFI ≥ .95, RMSEA ≤ .06, SRMR ≤ .08)
+2. If unidimensional, compute McDonald's omega (ω)
+3. If ω ≥ .70, report composite mean as supplementary analysis
+
+#### 4. Comprehension (Non-Inferiority)
+
+**Method:** Non-inferiority test for two proportions
+
+**Hypotheses:**
+
+- H₀: π_condensed - π_traditional ≤ -Δ (condensed is unacceptably worse)
+- H₁: π_condensed - π_traditional > -Δ (condensed is not meaningfully worse)
+
+**Parameters:**
+
+- Non-inferiority margin (Δ): 5 percentage points
+- Alpha: 0.05 (one-sided)
+- Decision: Reject H₀ if lower bound of 90% CI for difference exceeds -Δ
+
+### Multiple Comparison Correction
+
+Benjamini-Hochberg correction applied to superiority tests:
+
+1. ECL (format main effect from CLMM)
+2. Acceptability (format main effect from CLMM)
+
+Comprehension uses a separate non-inferiority framework and is not included in the BH correction.
+
+ICL is a manipulation check and excluded from correction.
+
+### Effect Size Reporting
+
+| Analysis | Effect Size |
+|----------|-------------|
+| t-tests | Cohen's d |
+| CLMM | Odds ratio |
+| Non-inferiority | Difference in proportions with CI |
+
+---
+
+# Part 2: Power Analysis
+
+## Setup
+
+```{r}
+#| label: setup
+#| code-fold: false
+
+# Install/load required packages
+required_packages <- c("ordinal", "lme4", "ggplot2", "dplyr", "tidyr", 
+                       "knitr", "future", "future.apply")
+
+for (pkg in required_packages) {
+  if (!require(pkg, character.only = TRUE, quietly = TRUE)) {
+    install.packages(pkg, repos = "https://cloud.r-project.org")
+    library(pkg, character.only = TRUE)
+  }
+}
+
+# Enable parallel processing
+plan(multisession, workers = max(1, parallel::detectCores() - 1))
+
+set.seed(42)
+```
+
+## Simulation Parameters
+
+```{r}
+#| label: parameters
+
+# Core parameters
+n_sims <- 1000
+sample_sizes <- seq(50, 300, by = 25)
+alpha <- 0.05
+
+# Superiority test parameters
+effect_size_d <- 0.5      # Moderate effect for ECL and Acceptability
+within_person_r <- 0.5    # Within-person correlation across items
+
+# Non-inferiority parameters
+baseline_accuracy <- 0.85
+ni_margin <- 0.07         # 7 percentage point margin
+ni_alpha <- 0.05          # One-sided alpha
+
+# Population size for resampling
+n_population <- 10000
+
+# Item counts
+n_items_icl <- 2
+n_items_ecl <- 3
+n_items_accept <- 5
+n_items_comp <- 7
+```
+
+```{r}
+#| label: parameters-table
+#| echo: false
+
+param_df <- data.frame(
+  Parameter = c(
+    "Simulations per N",
+    "Sample sizes tested",
+    "Population size",
+    "Alpha (superiority, BH corrected)",
+    "Alpha (non-inferiority, one-sided)",
+    "Effect size (ECL, Acceptability)",
+    "Non-inferiority margin (Comprehension)",
+    "Baseline comprehension accuracy",
+    "Within-person correlation",
+    "ICL items",
+    "ECL items",
+    "Acceptability items",
+    "Comprehension items"
+  ),
+  Value = c(
+    format(n_sims, big.mark = ","),
+    paste(min(sample_sizes), "-", max(sample_sizes), "(by 50)"),
+    format(n_population, big.mark = ","),
+    alpha,
+    paste(ni_alpha, "(one-sided)"),
+    paste0("d = ", effect_size_d),
+    paste0(ni_margin * 100, "%"),
+    paste0(baseline_accuracy * 100, "%"),
+    within_person_r,
+    n_items_icl,
+    n_items_ecl,
+    n_items_accept,
+    n_items_comp
+  )
+)
+
+knitr::kable(param_df, col.names = c("Parameter", "Value"),
+             caption = "Power Simulation Parameters")
+```
+
+## Helper Functions
+
+```{r}
+#| label: helper-functions
+
+# =============================================================================
+# DATA GENERATION FUNCTIONS
+# =============================================================================
+
+#' Generate correlated ordinal data (long format)
+generate_ordinal_data <- function(n_participants, n_items, effect_size, within_r) {
+  
+  n_per_group <- n_participants / 2
+  condition <- rep(c(0, 1), each = n_per_group)
+  
+  re_sd <- sqrt(within_r)
+  resid_sd <- sqrt(1 - within_r)
+  
+  participant_effects <- rnorm(n_participants, 0, re_sd)
+  
+  data_list <- vector("list", n_items)
+  
+  for (i in seq_len(n_items)) {
+    latent <- participant_effects + 
+              effect_size * condition + 
+              rnorm(n_participants, 0, resid_sd)
+    
+    thresholds <- qnorm(c(0.05, 0.15, 0.30, 0.50, 0.70, 0.85))
+    ordinal_response <- as.numeric(cut(latent, breaks = c(-Inf, thresholds, Inf)))
+    
+    data_list[[i]] <- data.frame(
+      participant = seq_len(n_participants),
+      condition = factor(condition),
+      item = factor(i),
+      response = ordered(ordinal_response, levels = 1:7)
+    )
+  }
+  
+  do.call(rbind, data_list)
+}
+
+
+#' Generate comprehension data (binomial, long format)
+generate_comp_data <- function(n_participants, n_items, baseline_p, true_diff = 0) {
+  
+  n_per_group <- n_participants / 2
+  condition <- rep(c(0, 1), each = n_per_group)
+  
+  re_sd <- 0.5
+  participant_effects <- rnorm(n_participants, 0, re_sd)
+  
+  # Control group at baseline, treatment group at baseline + true_diff
+  group_p <- ifelse(condition == 0, baseline_p, baseline_p + true_diff)
+  baseline_logodds <- qlogis(group_p)
+  
+  data_list <- vector("list", n_items)
+  
+  for (i in seq_len(n_items)) {
+    logodds <- baseline_logodds + 
+               participant_effects + 
+               rnorm(n_participants, 0, 0.3)
+    
+    prob <- plogis(logodds)
+    prob <- pmin(pmax(prob, 0.01), 0.99)  # Bound probabilities
+    correct <- rbinom(n_participants, 1, prob)
+    
+    data_list[[i]] <- data.frame(
+      participant = seq_len(n_participants),
+      condition = factor(condition),
+      item = factor(i),
+      correct = correct
+    )
+  }
+  
+  do.call(rbind, data_list)
+}
+
+
+#' Sample participants from population data
+sample_from_population <- function(pop_data, n_sample) {
+  
+  n_per_group <- n_sample / 2
+  
+  participants_cond0 <- unique(pop_data$participant[pop_data$condition == 0])
+  participants_cond1 <- unique(pop_data$participant[pop_data$condition == 1])
+  
+  sampled_cond0 <- sample(participants_cond0, n_per_group)
+  sampled_cond1 <- sample(participants_cond1, n_per_group)
+  sampled_participants <- c(sampled_cond0, sampled_cond1)
+  
+  sample_data <- pop_data[pop_data$participant %in% sampled_participants, ]
+  sample_data$participant <- as.integer(factor(sample_data$participant))
+  
+  sample_data
+}
+
+
+# =============================================================================
+# MODEL FITTING FUNCTIONS
+# =============================================================================
+
+#' Fit CLMM for ordinal data
+fit_clmm <- function(data) {
+  
+  tryCatch({
+    model <- ordinal::clmm(
+      response ~ condition + item + (1 | participant),
+      data = data,
+      link = "logit"
+    )
+    
+    coef_table <- summary(model)$coefficients
+    condition_row <- grep("condition1", rownames(coef_table))
+    
+    if (length(condition_row) > 0) {
+      list(
+        p = coef_table[condition_row, "Pr(>|z|)"],
+        estimate = coef_table[condition_row, "Estimate"],
+        converged = TRUE
+      )
+    } else {
+      list(p = NA_real_, estimate = NA_real_, converged = FALSE)
+    }
+  }, error = function(e) {
+    list(p = NA_real_, estimate = NA_real_, converged = FALSE)
+  })
+}
+
+
+#' Non-inferiority test for comprehension
+test_noninferiority <- function(data, margin, alpha) {
+  
+  # Aggregate to GROUP-level totals (not participant means)
+  group_stats <- data %>%
+    group_by(condition) %>%
+    summarise(
+      n_correct = sum(correct),
+      n_total = n(),
+      .groups = "drop"
+    )
+  
+  # Group proportions
+  p1 <- group_stats$n_correct[group_stats$condition == 0] / 
+        group_stats$n_total[group_stats$condition == 0]
+  p2 <- group_stats$n_correct[group_stats$condition == 1] / 
+        group_stats$n_total[group_stats$condition == 1]
+  
+  n1 <- group_stats$n_total[group_stats$condition == 0]
+  n2 <- group_stats$n_total[group_stats$condition == 1]
+  
+  diff <- p2 - p1
+  se <- sqrt((p1 * (1 - p1) / n1) + (p2 * (1 - p2) / n2))
+  
+  z_stat <- (diff + margin) / se
+  p_value <- 1 - pnorm(z_stat)
+  
+  list(
+    p = p_value,
+    reject_h0 = p_value < alpha,
+    diff = diff,
+    ci_lower = diff - qnorm(1 - alpha) * se,
+    converged = TRUE
+  )
+}
+
+
+# =============================================================================
+# SIMULATION FUNCTION
+# =============================================================================
+
+#' Run a single simulation iteration
+run_single_sim <- function(sim_id, n, pop_ecl, pop_accept, pop_comp, 
+                           alpha_sup, ni_margin, ni_alpha) {
+  
+  # Sample from populations
+  sample_ecl <- sample_from_population(pop_ecl, n)
+  sample_accept <- sample_from_population(pop_accept, n)
+  sample_comp <- sample_from_population(pop_comp, n)
+  
+  # Fit superiority models (ECL, Acceptability)
+  ecl_result <- fit_clmm(sample_ecl)
+  accept_result <- fit_clmm(sample_accept)
+  
+  # Non-inferiority test (Comprehension)
+  comp_result <- test_noninferiority(sample_comp, ni_margin, ni_alpha)
+  
+  # Check convergence
+  sup_converged <- ecl_result$converged && accept_result$converged
+  ni_converged <- comp_result$converged
+  
+  if (!sup_converged) {
+    return(c(ecl_sig = NA, accept_sig = NA, comp_ni = NA, converged = FALSE))
+  }
+  
+  # BH correction for superiority tests only
+  p_sup <- c(ecl_result$p, accept_result$p)
+  p_adj <- p.adjust(p_sup, method = "BH")
+  
+  c(
+    ecl_sig = p_adj[1] < alpha_sup,
+    accept_sig = p_adj[2] < alpha_sup,
+    comp_ni = ifelse(ni_converged, comp_result$reject_h0, NA),
+    converged = TRUE
+  )
+}
+```
+
+## Generate Population Data
+
+```{r}
+#| label: generate-population
+#| cache: false
+
+cat("Generating population data (N =", format(n_population, big.mark = ","), ")...\n")
+
+# ECL and Acceptability: effect present (d = 0.5)
+pop_ecl <- generate_ordinal_data(n_population, n_items_ecl, effect_size_d, within_person_r)
+pop_accept <- generate_ordinal_data(n_population, n_items_accept, effect_size_d, within_person_r)
+
+# Comprehension: no true difference (for non-inferiority, assume equivalence)
+pop_comp <- generate_comp_data(n_population, n_items_comp, baseline_accuracy, true_diff = 0)
+
+cat("Population data generated.\n")
+```
+
+## Run Simulation
+
+::: {.callout-note}
+Using parallel processing with `r max(1, parallel::detectCores() - 1)` cores.
+:::
+
+```{r}
+#| label: run-simulation
+#| cache: false
+
+results <- data.frame(
+  n = integer(),
+  power_ecl = numeric(),
+  power_accept = numeric(),
+  power_comp_ni = numeric(),
+  convergence_rate = numeric()
+)
+
+start_time <- Sys.time()
+
+for (n in sample_sizes) {
+  
+  cat(sprintf("Simulating N = %d... ", n))
+  
+  # Run simulations in parallel
+  sim_results <- future_lapply(
+    seq_len(n_sims),
+    function(sim_id) {
+      run_single_sim(sim_id, n, pop_ecl, pop_accept, pop_comp,
+                     alpha, ni_margin, ni_alpha)
+    },
+    future.seed = TRUE
+  )
+  
+  # Combine results
+  sim_matrix <- do.call(rbind, sim_results)
+  
+  # Calculate power
+  converged_mask <- sim_matrix[, "converged"] == TRUE
+  n_converged <- sum(converged_mask, na.rm = TRUE)
+  
+  if (n_converged > 0) {
+    power_ecl <- mean(sim_matrix[converged_mask, "ecl_sig"], na.rm = TRUE)
+    power_accept <- mean(sim_matrix[converged_mask, "accept_sig"], na.rm = TRUE)
+    power_comp_ni <- mean(sim_matrix[converged_mask, "comp_ni"], na.rm = TRUE)
+  } else {
+    power_ecl <- power_accept <- power_comp_ni <- NA
+  }
+  
+  results <- rbind(results, data.frame(
+    n = n,
+    power_ecl = power_ecl,
+    power_accept = power_accept,
+    power_comp_ni = power_comp_ni,
+    convergence_rate = n_converged / n_sims
+  ))
+  
+  cat(sprintf("ECL=%.2f, Accept=%.2f, Comp(NI)=%.2f (converged: %d/%d)\n",
+              power_ecl, power_accept, power_comp_ni, n_converged, n_sims))
+}
+
+end_time <- Sys.time()
+runtime <- as.numeric(difftime(end_time, start_time, units = "mins"))
+
+plan(sequential)
+```
+
+**Runtime:** `r round(runtime, 1)` minutes
+
+## Results
+
+### Power by Sample Size
+
+```{r}
+#| label: results-table
+
+results_display <- results %>%
+  mutate(
+    power_ecl = sprintf("%.2f", power_ecl),
+    power_accept = sprintf("%.2f", power_accept),
+    power_comp_ni = sprintf("%.2f", power_comp_ni),
+    convergence_rate = sprintf("%.1f%%", convergence_rate * 100)
+  )
+
+knitr::kable(
+  results_display,
+  col.names = c("N", "ECL (Sup.)", "Acceptability (Sup.)", 
+                "Comprehension (NI)", "Convergence"),
+  align = "r",
+  caption = "Power estimates by sample size"
+)
+```
+
+### Power Curve
+
+```{r}
+#| label: power-curve
+#| fig-width: 10
+#| fig-height: 6
+
+results_long <- results %>%
+  select(n, power_ecl, power_accept, power_comp_ni) %>%
+  pivot_longer(
+    cols = starts_with("power_"), 
+    names_to = "measure", 
+    values_to = "power"
+  ) %>%
+  mutate(measure = case_when(
+    measure == "power_ecl" ~ "ECL (Superiority)",
+    measure == "power_accept" ~ "Acceptability (Superiority)",
+    measure == "power_comp_ni" ~ "Comprehension (Non-Inferiority)"
+  ))
+
+ggplot(results_long, aes(x = n, y = power, color = measure, shape = measure)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "gray50") +
+  annotate("text", x = max(sample_sizes), y = 0.82, label = "80% power", 
+           hjust = 1, color = "gray50") +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.1)) +
+  scale_x_continuous(breaks = sample_sizes) +
+  scale_color_manual(values = c(
+    "ECL (Superiority)" = "#2E86AB", 
+    "Acceptability (Superiority)" = "#A23B72",
+    "Comprehension (Non-Inferiority)" = "#F18F01"
+  )) +
+  labs(
+    title = "Power Analysis: Report Format Comparison Study",
+    subtitle = sprintf(
+      "Superiority: d = %.1f | Non-Inferiority: margin = %.0f%%, baseline = %.0f%%",
+      effect_size_d, ni_margin * 100, baseline_accuracy * 100
+    ),
+    x = "Total Sample Size (N)",
+    y = "Power",
+    color = "Analysis",
+    shape = "Analysis"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+### Minimum N for 80% Power
+
+```{r}
+#| label: minimum-n
+#| echo: false
+
+min_n_ecl <- results$n[which(results$power_ecl >= 0.80)[1]]
+min_n_accept <- results$n[which(results$power_accept >= 0.80)[1]]
+min_n_comp <- results$n[which(results$power_comp_ni >= 0.80)[1]]
+
+min_n_df <- data.frame(
+  Measure = c("ECL (Superiority)", "Acceptability (Superiority)", 
+              "Comprehension (Non-Inferiority)"),
+  `Minimum N` = c(
+    ifelse(is.na(min_n_ecl), ">500", as.character(min_n_ecl)),
+    ifelse(is.na(min_n_accept), ">500", as.character(min_n_accept)),
+    ifelse(is.na(min_n_comp), ">500", as.character(min_n_comp))
+  ),
+  check.names = FALSE
+)
+
+knitr::kable(min_n_df, caption = "Minimum sample size for 80% power")
+```
+
+---
+
+# Part 3: Non-Inferiority Sensitivity Analysis
+
+## Effect of True Difference
+
+What if the condensed format is actually slightly worse (but still within the acceptable margin)?
+
+```{r}
+#| label: ni-sensitivity-diff
+#| fig-width: 10
+#| fig-height: 6
+
+#' Analytical power for non-inferiority test
+power_ni_analytical <- function(n_per_group, p1, p2, delta, alpha = 0.05) {
+  true_diff <- p2 - p1
+  
+  # Participant-level variance accounts for within-person correlation across items
+  # Each participant has a proportion correct (mean of 7 binary items)
+  # Variance of participant-level proportion: p(1-p)/n_items + ICC adjustment
+  n_items <- 7
+  icc <- 0.5  # matches within_person_r in simulation parameters
+  
+  # Variance of mean proportion score per participant
+  # = p(1-p)/n_items * (1 + (n_items - 1) * icc)
+  var1 <- (p1 * (1 - p1) / n_items) * (1 + (n_items - 1) * icc)
+  var2 <- (p2 * (1 - p2) / n_items) * (1 + (n_items - 1) * icc)
+  
+  se <- sqrt(var1 / n_per_group + var2 / n_per_group)
+  
+  z_alpha <- qnorm(1 - alpha)
+  z_power <- (true_diff + delta) / se - z_alpha
+  pnorm(z_power)
+}
+
+# Test different true differences
+true_differences <- c(0, -0.01, -0.02, -0.03, -0.04)
+
+sensitivity_diff <- expand.grid(
+  n_per_group = seq(50, 300, by = 10),
+  true_diff = true_differences
+) %>%
+  mutate(
+    n_total = n_per_group * 2,
+    p_condensed = baseline_accuracy + true_diff,
+    power = mapply(function(n, p2) {
+      power_ni_analytical(n, baseline_accuracy, p2, ni_margin, ni_alpha)
+    }, n_per_group, p_condensed),
+    true_diff_label = sprintf("%.0f%%", true_diff * 100)
+  )
+
+ggplot(sensitivity_diff, aes(x = n_total, y = power, color = true_diff_label)) +
+  geom_line(linewidth = 1) +
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "gray50") +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.1)) +
+  scale_x_continuous(breaks = seq(100, 600, by = 50)) +
+  scale_color_viridis_d(option = "plasma", end = 0.8) +
+  labs(
+    title = "Non-Inferiority Power: Sensitivity to True Difference",
+    subtitle = sprintf("Margin = %.0f%%, Baseline = %.0f%%", 
+                       ni_margin * 100, baseline_accuracy * 100),
+    x = "Total Sample Size (N)",
+    y = "Power",
+    color = "True difference\n(condensed - traditional)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+```{r}
+#| label: ni-sensitivity-diff-table
+#| echo: false
+
+sensitivity_diff_summary <- sensitivity_diff %>%
+  group_by(true_diff_label) %>%
+  summarise(
+    min_n_80 = n_total[which(power >= 0.80)[1]],
+    min_n_90 = n_total[which(power >= 0.90)[1]],
+    .groups = "drop"
+  ) %>%
+  mutate(
+    min_n_80 = ifelse(is.na(min_n_80), ">600", as.character(min_n_80)),
+    min_n_90 = ifelse(is.na(min_n_90), ">600", as.character(min_n_90))
+  )
+
+knitr::kable(
+  sensitivity_diff_summary,
+  col.names = c("True difference", "Min N (80% power)", "Min N (90% power)"),
+  caption = "Required N for non-inferiority by true difference"
+)
+```
+
+## Effect of Margin Choice
+
+```{r}
+#| label: ni-sensitivity-margin
+#| fig-width: 10
+#| fig-height: 6
+
+margins <- c(0.03, 0.05, 0.07, 0.10)
+
+sensitivity_margin <- expand.grid(
+  n_per_group = seq(50, 300, by = 10),
+  margin = margins
+) %>%
+  mutate(
+    n_total = n_per_group * 2,
+    power = mapply(function(n, d) {
+      power_ni_analytical(n, baseline_accuracy, baseline_accuracy, d, ni_alpha)
+    }, n_per_group, margin),
+    margin_label = sprintf("%.0f%%", margin * 100)
+  )
+
+ggplot(sensitivity_margin, aes(x = n_total, y = power, color = margin_label)) +
+  geom_line(linewidth = 1) +
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "gray50") +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.1)) +
+  scale_x_continuous(breaks = seq(100, 600, by = 50)) +
+  scale_color_viridis_d(option = "viridis", end = 0.8) +
+  labs(
+    title = "Non-Inferiority Power: Sensitivity to Margin Choice",
+    subtitle = sprintf("Baseline = %.0f%%, True difference = 0", baseline_accuracy * 100),
+    x = "Total Sample Size (N)",
+    y = "Power",
+    color = "Non-inferiority\nmargin (Δ)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+```{r}
+#| label: ni-sensitivity-margin-table
+#| echo: false
+
+sensitivity_margin_summary <- sensitivity_margin %>%
+  group_by(margin_label) %>%
+  summarise(
+    min_n_80 = n_total[which(power >= 0.80)[1]],
+    min_n_90 = n_total[which(power >= 0.90)[1]],
+    .groups = "drop"
+  ) %>%
+  mutate(
+    min_n_80 = ifelse(is.na(min_n_80), ">600", as.character(min_n_80)),
+    min_n_90 = ifelse(is.na(min_n_90), ">600", as.character(min_n_90))
+  )
+
+knitr::kable(
+  sensitivity_margin_summary,
+  col.names = c("Margin", "Min N (80% power)", "Min N (90% power)"),
+  caption = "Required N for non-inferiority by margin choice"
+)
+```
+
+---
+
+# Part 4: Recommendations & Methods Text
+
+## Summary
+
+```{r}
+#| label: summary
+#| echo: false
+#| results: asis
+
+rec_n <- max(min_n_ecl, min_n_accept, min_n_comp, na.rm = TRUE)
+
+cat(sprintf("
+### Recommended Sample Size: N = %s
+
+This provides:
+
+- **≥80%% power** to detect moderate effects (d = 0.5) on ECL and Acceptability
+- **≥80%% power** to demonstrate non-inferiority on Comprehension (margin = 5%%)
+
+### Key Considerations
+
+1. **ECL and Acceptability** reach ceiling power quickly—even N = 150 is adequate for moderate effects
+
+2. **Comprehension non-inferiority** drives the sample size requirement with a 5%% margin
+
+3. **If condensed format is actually 2-3%% worse** (but still acceptable), you need larger N (~400-500) to demonstrate non-inferiority
+
+4. **A more lenient margin (7-10%%)** would substantially reduce required N
+", rec_n))
+```
+
+## Methods Section Draft
+
+```{r}
+#| label: methods-text
+#| echo: false
+#| results: asis
+
+cat(sprintf("
+> ### Power Analysis
+>
+> A simulation-based power analysis was conducted to determine the required sample size. For extraneous cognitive load and acceptability, we used cumulative link mixed models (CLMM) and assumed a moderate effect size (d = %.1f) with Benjamini-Hochberg correction. For comprehension, we framed the hypothesis as non-inferiority, testing whether the condensed format produces accuracy not more than %.0f percentage points below the traditional format (baseline = %.0f%%), using a one-sided α = %.2f.
+>
+> We simulated %s datasets at each sample size from N = %d to N = %d, sampling from a population of %s simulated participants. Results indicated that **N = %s** provides ≥80%% power for all primary outcomes: detecting moderate superiority effects on cognitive load and acceptability, and demonstrating non-inferiority on comprehension assuming the formats are equivalent.
+",
+effect_size_d, ni_margin * 100, baseline_accuracy * 100, ni_alpha,
+format(n_sims, big.mark = ","), min(sample_sizes), max(sample_sizes),
+format(n_population, big.mark = ","), rec_n))
+```
+
+---
+
+# Part 5: Analysis Code for Actual Data
+
+## Non-Inferiority Test
+
+```{r}
+#| label: ni-analysis-code
+#| eval: false
+#| code-fold: false
+
+# =============================================================================
+# NON-INFERIORITY TEST FOR COMPREHENSION
+# =============================================================================
+
+# Parameters
+delta <- 0.05  # Non-inferiority margin
+alpha <- 0.05  # One-sided
+
+# Your data (replace with actual values)
+n1 <- 150  # Traditional group N
+x1 <- 120  # Traditional correct (sum across all items, or use proportions)
+n2 <- 150  # Condensed group N
+x2 <- 118  # Condensed correct
+
+# Calculate
+p1 <- x1 / n1
+p2 <- x2 / n2
+diff <- p2 - p1
+se <- sqrt((p1 * (1 - p1) / n1) + (p2 * (1 - p2) / n2))
+
+z_stat <- (diff + delta) / se
+p_value <- 1 - pnorm(z_stat)
+
+ci_lower <- diff - qnorm(1 - alpha) * se
+ci_upper <- diff + qnorm(1 - alpha) * se
+
+# Output
+cat("Non-Inferiority Test Results\n")
+cat("============================\n")
+cat(sprintf("Traditional: %.1f%%\n", p1 * 100))
+cat(sprintf("Condensed:   %.1f%%\n", p2 * 100))
+cat(sprintf("Difference:  %.1f%% [90%% CI: %.1f%% to %.1f%%]\n", 
+            diff * 100, ci_lower * 100, ci_upper * 100))
+cat(sprintf("Margin:      -%.1f%%\n", delta * 100))
+cat(sprintf("P-value:     %.4f (one-sided)\n", p_value))
+cat(sprintf("Conclusion:  %s\n", 
+            ifelse(ci_lower > -delta, "Non-inferiority demonstrated", 
+                   "Non-inferiority NOT demonstrated")))
+```
+
+## CLMM for Ordinal Outcomes
+
+```{r}
+#| label: clmm-analysis-code
+#| eval: false
+#| code-fold: false
+
+# =============================================================================
+# CLMM FOR ECL / ACCEPTABILITY
+# =============================================================================
+
+library(ordinal)
+
+# Your data should be in long format:
+#   participant | condition | item | response
+#   1           | control   | 1    | 5
+#   1           | control   | 2    | 4
+#   ...
+
+# Fit model
+model_ecl <- clmm(response ~ condition + item + (1 | participant),
+                  data = ecl_data, link = "logit")
+
+# Results
+summary(model_ecl)
+
+# Effect size (odds ratio)
+exp(coef(model_ecl)["condition1"])
+```
+
+## Export Results
+
+```{r}
+#| label: export
+
+write.csv(results, "power_results.csv", row.names = FALSE)
+ggsave("power_curve.png", width = 10, height = 6, dpi = 300)
+```
+
+## Session Info
+
+```{r}
+#| label: session-info
+
+sessionInfo()
+```

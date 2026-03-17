@@ -1,0 +1,4 @@
+"0","therapy_binary <- dat %>% count(ClinicTherapyBinary) %>% mutate(Percentage = round(100 * n / sum(n), 1))"
+"0","assmnt_binary <- dat %>% count(ClinicAssmntBinary) %>% mutate(Percentage = round(100 * n / sum(n), 1))"
+"0",""
+"0","therapy_binary %>% kable(caption = ""Clinics Offering Therapy Services"") %>% kable_styling()"

@@ -1,0 +1,38 @@
+"0",""
+"0","# Flag any conflicts"
+"0","conflicts <- tenure_check %>%"
+"0","  filter(str_detect(Classification, ""CONFLICT""))"
+"0",""
+"0","if (nrow(conflicts) > 0) {"
+"0","  cat(""\n🚨 ERROR: Some positions are classified as BOTH TT and NTT!\n"")"
+"0","  cat(""This should not happen. Check the classification logic.\n"")"
+"0","}"
+"0",""
+"0","# Show unclassified"
+"0","unclassified <- tenure_check %>%"
+"0","  filter(Classification == ""Unclassified"")"
+"0",""
+"0","if (nrow(unclassified) > 0) {"
+"0","  cat(""\n⚠️ NOTE:"", sum(unclassified$n), ""positions could not be classified as TT or NTT.\n"")"
+"0","  cat(""These will be excluded from TT vs. NTT comparisons.\n"")"
+"0","  print(unclassified)"
+"0","}"
+"1","
+⚠️ NOTE:"
+"1"," "
+"1","15"
+"1"," "
+"1","positions could not be classified as TT or NTT.
+"
+"1","These will be excluded from TT vs. NTT comparisons.
+"
+"1","[38;5;246m# A tibble: 2 × 3[39m
+"
+"1","  Classification PositionType                         n
+"
+"1","  [3m[38;5;246m<chr>[39m[23m          [3m[38;5;246m<chr>[39m[23m                            [3m[38;5;246m<int>[39m[23m
+"
+"1","[38;5;250m1[39m Unclassified   Administrative or Staff position    14
+"
+"1","[38;5;250m2[39m Unclassified   Other (please specify):              1
+"

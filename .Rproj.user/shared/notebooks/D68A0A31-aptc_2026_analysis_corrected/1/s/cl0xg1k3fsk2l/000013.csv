@@ -1,0 +1,5 @@
+"0","billing_summary <- dat %>% count(ClinicBillBinary) %>% mutate(Percentage = round(100 * n / sum(n), 1))"
+"0",""
+"0","billing_summary %>%"
+"0","  kable(caption = ""Does Your Clinic Bill Insurance?"") %>%"
+"0","  kable_styling(bootstrap_options = c(""striped"", ""hover""))"

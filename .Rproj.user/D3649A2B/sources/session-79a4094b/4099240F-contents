@@ -1,0 +1,1512 @@
+---
+title: "APTC 2026 Survey Results"
+subtitle: "Association of Psychology Training Clinics"
+author: "Jacqueline Hersh, Ph.D. & Ryan L. Farmer, Ph.D."
+date: today
+format:
+  revealjs:
+    theme: [default, custom.scss]
+    slide-number: true
+    logo: ""
+    footer: "APTC 2026 Annual Survey"
+    transition: fade
+    background-transition: fade
+    highlight-style: github
+    code-fold: true
+    fig-width: 10
+    fig-height: 6
+editor: visual
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+library(tidyverse)
+library(scales)
+library(gt)
+library(knitr)
+library(kableExtra)
+
+# APTC Colors
+aptc_navy  <- "#252b3b"
+aptc_coral <- "#ff6544"
+aptc_teal  <- "#31a8c0"
+
+aptc_palette <- c(
+ aptc_coral, "#ff8f77", "#e24f33",
+ aptc_teal, "#5bc0d4", "#1f7f92",
+ aptc_navy, "#454d5f", "#161b29"
+)
+
+# Load and clean data (same as analysis)
+dat <- read_excel("dat.xlsx")
+dat <- dat[-1, ]
+
+dat <- dat %>%
+ mutate(across(where(is.numeric), ~ na_if(., -99))) %>%
+ mutate(across(where(is.character), ~ na_if(., "-99"))) %>%
+ mutate(
+   across(
+     matches("Binary$"),
+     ~ case_when(
+       str_detect(., regex("^yes$", ignore_case = TRUE)) ~ "Yes",
+       str_detect(., regex("^no$",  ignore_case = TRUE)) ~ "No",
+       TRUE ~ NA_character_
+     )
+   )
+ ) %>%
+ mutate(
+   Progress = as.numeric(Progress),
+   GrossSalary = as.numeric(GrossSalary),
+   FTESalary = as.numeric(FTESalary),
+   RoleDuration = as.numeric(RoleDuration),
+   ClinicDuration = as.numeric(ClinicDuration),
+   ClinicAge = as.numeric(ClinicAge),
+   HoursWorkClinic = as.numeric(HoursWorkClinic),
+   CoursesTaught = as.numeric(CoursesTaught),
+   ClinicTotalTrainees = as.numeric(ClinicTotalTrainees),
+   ClinicClientsCount = as.numeric(ClinicClientsCount),
+   NumRooms = as.numeric(NumRooms),
+   MaxTraineeCount = as.numeric(MaxTraineeCount),
+   ClinicRevenue = as.numeric(ClinicRevenue),
+   Burnout_1 = as.numeric(Burnout_1),
+   Burnout_2 = as.numeric(Burnout_2),
+   Burnout_3 = as.numeric(Burnout_3),
+   Burnout_4 = as.numeric(Burnout_4),
+   Burnout_5 = as.numeric(Burnout_5),
+   FTESupportStaff = as.numeric(FTESupportStaff),
+   FTEGradStaff = as.numeric(FTEGradStaff),
+   PostdocCount = as.numeric(PostdocCount),
+   ClinicHours = as.numeric(ClinicHours),
+   MaxTraineesTherapy = as.numeric(MaxTraineesTherapy),
+   MaxTraineesAssmnt = as.numeric(MaxTraineesAssmnt),
+   TxLength = as.numeric(TxLength),
+   MaxTxCasesAllow = as.numeric(MaxTxCasesAllow),
+   MaxAxCasesAllow = as.numeric(MaxAxCasesAllow)
+ )
+
+# Clean ClinSqFt as categorical
+dat <- dat %>%
+ mutate(
+   ClinSqFt = case_when(
+     ClinSqFt == "-99" ~ NA_character_,
+     TRUE ~ ClinSqFt
+   ),
+   ClinSqFt = factor(ClinSqFt, levels = c(
+     "Under 500 sq ft", "500–999 sq ft", "1,000–1,999 sq ft",
+     "2,000–4,999 sq ft", "5,000 sq ft or more"
+   ))
+ )
+
+# Rank grouping
+dat <- dat %>%
+ mutate(RankGrp = case_when(
+   str_detect(Rank, regex("assistant", ignore_case = TRUE)) ~ "Assistant Professor",
+   str_detect(Rank, regex("associate", ignore_case = TRUE)) ~ "Associate Professor",
+   str_detect(Rank, regex("^full|full professor", ignore_case = TRUE)) ~ "Full Professor",
+   str_detect(Rank, regex("lecturer|instructor", ignore_case = TRUE)) ~ "Lecturer",
+   str_detect(Rank, regex("staff|n/a|not applicable", ignore_case = TRUE)) ~ "Staff (N/A)",
+   !is.na(Rank) ~ "Other (specified)",
+   TRUE ~ "Unspecified Rank"
+ ))
+```
+
+# Sample Overview {background-color="#252b3b"}
+
+::: notes
+Welcome to the 2026 APTC Annual Survey results. This presentation covers key findings from our membership survey, including sample demographics, salary data, clinic operations, and director wellbeing.
+:::
+
+## Who Responded?
+
+:::::: columns
+::: {.column width="50%"}
+```{r}
+mem_status <- dat %>%
+ count(MemStatus) %>%
+ mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(mem_status %>% filter(!is.na(MemStatus)), 
+      aes(x = reorder(MemStatus, n), y = n, fill = MemStatus)) +
+ geom_col(show.legend = FALSE) +
+ geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+ coord_flip() +
+ scale_fill_manual(values = aptc_palette) +
+ scale_y_continuous(limits = c(0, 140)) +
+ labs(title = "Membership Status", x = NULL, y = "Count") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+
+:::: {.column width="50%"}
+### Sample Highlights
+
+-   **N = `r nrow(dat)`** total respondents
+-   **`r sum(dat$MemStatus == "Member", na.rm = TRUE)`** full members (`r round(100*sum(dat$MemStatus == "Member", na.rm = TRUE)/nrow(dat), 1)`%)
+-   **`r sum(dat$MemStatus == "Associate Member", na.rm = TRUE)`** associate members
+
+::: callout-note
+Throughout this presentation, n's vary because not everyone answered every question.
+:::
+::::
+::::::
+
+::: notes
+Our sample includes 120 respondents, with 92% being full APTC members. Sample sizes vary across analyses due to item-level missingness.
+:::
+
+## Professional Background
+
+```{r}
+prof_deg <- dat %>%
+ filter(!is.na(ProfDeg)) %>%
+ count(ProfDeg) %>%
+ mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+ arrange(desc(n))
+
+ggplot(prof_deg, aes(x = reorder(ProfDeg, n), y = Percentage, fill = ProfDeg)) +
+ geom_col(show.legend = FALSE) +
+ geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+ coord_flip() +
+ scale_fill_manual(values = aptc_palette) +
+ scale_y_continuous(limits = c(0, 100)) +
+ labs(title = "Professional Degree", x = NULL, y = "Percentage (%)") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+The vast majority of clinic directors hold doctoral degrees in psychology, with Ph.D. being the most common credential.
+:::
+
+## Degree Area
+
+```{r}
+deg_area <- dat %>%
+  filter(!is.na(DegArea)) %>%
+  count(DegArea) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+ggplot(deg_area, aes(x = reorder(DegArea, n), y = Percentage, fill = DegArea)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+  coord_flip() +
+  scale_fill_manual(values = aptc_palette) +
+  scale_y_continuous(limits = c(0, 100)) +
+  labs(title = "Graduate Degree Areas", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 16) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Most clinic directors specialize in clinical psychology, though counseling and school psychology are also well-represented.
+:::
+
+## Experience in Role
+
+::::: columns
+::: {.column width="50%"}
+```{r}
+role_stats <- dat %>%
+ filter(!is.na(RoleDuration)) %>%
+ summarise(N = n(), Mean = mean(RoleDuration), SD = sd(RoleDuration),
+           Median = median(RoleDuration), Min = min(RoleDuration), Max = max(RoleDuration))
+
+dat %>%
+ filter(!is.na(RoleDuration)) %>%
+ ggplot(aes(x = RoleDuration)) +
+ geom_histogram(binwidth = 2, fill = aptc_teal, color = "white", alpha = 0.9) +
+ geom_vline(aes(xintercept = median(RoleDuration)), color = aptc_coral, 
+            linetype = "dashed", linewidth = 1.2) +
+ labs(title = "Years in Current Role",
+      subtitle = paste0("Median = ", role_stats$Median, " years"),
+      x = "Years", y = "Count") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+
+::: {.column width="50%"}
+### Role Duration
+
+| Statistic | Value                                         |
+|-----------|-----------------------------------------------|
+| N         | `r role_stats$N`                              |
+| Mean      | `r round(role_stats$Mean, 1)` years           |
+| Median    | `r role_stats$Median` years                   |
+| Range     | `r role_stats$Min` – `r role_stats$Max` years |
+:::
+:::::
+
+::: notes
+Directors have a median of X years in their current role, with a wide range reflecting both new directors and long-tenured leaders.
+:::
+
+# Position Characteristics {background-color="#252b3b"}
+
+## Academic Rank
+
+```{r}
+rank_summary <- dat %>%
+ filter(!is.na(RankGrp)) %>%
+ count(RankGrp) %>%
+ mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+ arrange(desc(n))
+
+ggplot(rank_summary, aes(x = reorder(RankGrp, n), y = Percentage, fill = RankGrp)) +
+ geom_col(show.legend = FALSE) +
+ geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+ coord_flip() +
+ scale_fill_manual(values = aptc_palette) +
+ scale_y_continuous(limits = c(0, 50)) +
+ labs(title = "Academic Rank Distribution", x = NULL, y = "Percentage (%)") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Associate and Assistant Professor ranks are most common among clinic directors. A notable proportion hold staff positions without faculty rank.
+:::
+
+## Academic Rank by Tenure Status
+
+```{r}
+nz <- function(x) ifelse(is.na(x), "", x)
+is_tt <- function(x) str_detect(nz(x), regex("tenure[- ]track|tenured(?!.*non)", ignore_case = TRUE)) & 
+                     !str_detect(nz(x), regex("non.?tenure", ignore_case = TRUE))
+is_ntt <- function(x) str_detect(nz(x), regex("non.?tenure|clinical.?track|instructor|lecturer|staff|visiting", ignore_case = TRUE))
+
+rank_tenure <- dat %>%
+  filter(!is.na(Rank), !is.na(PositionType)) %>%
+  mutate(
+    Rank_clean = case_when(
+      str_detect(Rank, regex("assistant", ignore_case = TRUE)) ~ "Assistant",
+      str_detect(Rank, regex("associate", ignore_case = TRUE)) ~ "Associate",
+      str_detect(Rank, regex("^full|full professor", ignore_case = TRUE)) ~ "Full",
+      str_detect(Rank, regex("lecturer|instructor", ignore_case = TRUE)) ~ "Lecturer",
+      str_detect(Rank, regex("staff|n/a", ignore_case = TRUE)) ~ "Staff/N.A.",
+      TRUE ~ "Other"
+    ),
+    TenureStatus = case_when(
+      is_tt(PositionType) ~ "TT/Tenured",
+      is_ntt(PositionType) ~ "NTT",
+      TRUE ~ "Other/Admin"
+    )
+  )
+
+tenure_table <- rank_tenure %>%
+  count(Rank_clean, TenureStatus) %>%
+  pivot_wider(names_from = TenureStatus, values_from = n, values_fill = 0)
+
+tenure_table %>%
+  kable(col.names = c("Rank", names(tenure_table)[-1]), caption = "Academic Rank by Tenure Track Status") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), font_size = 18)
+```
+
+::: notes
+The majority of clinic directors, across all ranks, hold non-tenure-track positions. Tenure-track positions are relatively rare for this role.
+:::
+
+## Who Do We Report To?
+
+```{r}
+sup_summary <- dat %>%
+  filter(!is.na(Supervisor)) %>%
+  count(Supervisor) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+ggplot(sup_summary, aes(x = reorder(Supervisor, n), y = Percentage, fill = Supervisor)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+  coord_flip() +
+  scale_fill_manual(values = aptc_palette) +
+  scale_y_continuous(limits = c(0, 60)) +
+  labs(title = "Who Do Directors Report To?", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 16) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Most clinic directors report to a department chair or program director. The reporting structure reflects the academic nature of most training clinics.
+:::
+
+## Contract Characteristics
+
+```{r}
+contract_summary <- dat %>%
+ filter(!is.na(ContractLength)) %>%
+ count(ContractLength) %>%
+ mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+ arrange(desc(n))
+
+ggplot(contract_summary, aes(x = reorder(ContractLength, n), y = Percentage, fill = ContractLength)) +
+ geom_col(show.legend = FALSE) +
+ geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+ coord_flip() +
+ scale_fill_manual(values = aptc_palette) +
+ scale_y_continuous(limits = c(0, 50)) +
+ labs(title = "Contract Length", x = NULL, y = "Percentage (%)") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Contract lengths vary considerably, with yearly contracts and tenured/permanent positions being most common.
+:::
+
+## Contract Type (Months)
+
+```{r}
+contract_months <- dat %>%
+  filter(!is.na(ContractMonths)) %>%
+  count(ContractMonths) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+ggplot(contract_months, aes(x = reorder(ContractMonths, n), y = Percentage, fill = ContractMonths)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+  coord_flip() +
+  scale_fill_manual(values = aptc_palette) +
+  scale_y_continuous(limits = c(0, 90)) +
+  labs(title = "Contract Type (Months)", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 16) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+The vast majority of clinic directors hold 12-month contracts, which reflects the administrative and service demands of the role that extend beyond the traditional academic year.
+:::
+
+# Salary Analysis {background-color="#252b3b"}
+
+## Overall Salary Distribution
+
+```{r}
+salary_stats <- dat %>%
+ filter(!is.na(GrossSalary)) %>%
+ summarise(N = n(), Mean = mean(GrossSalary), SD = sd(GrossSalary),
+           Median = median(GrossSalary), Q1 = quantile(GrossSalary, 0.25),
+           Q3 = quantile(GrossSalary, 0.75))
+
+dat %>%
+ filter(!is.na(GrossSalary)) %>%
+ ggplot(aes(x = GrossSalary)) +
+ geom_histogram(binwidth = 10000, fill = aptc_teal, color = "white", alpha = 0.9) +
+ geom_vline(aes(xintercept = median(GrossSalary)), color = aptc_coral, 
+            linetype = "dashed", linewidth = 1.2) +
+ scale_x_continuous(labels = dollar_format()) +
+ labs(title = "Gross Salary Distribution",
+      subtitle = paste0("Median = ", dollar(salary_stats$Median), " | Mean = ", dollar(round(salary_stats$Mean))),
+      x = "Gross Salary", y = "Count") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+The median gross salary is approximately \$104,000, with a mean of \$106,000. There is considerable variation across positions.
+:::
+
+## Salary by Academic Rank
+
+```{r}
+dat %>%
+ filter(!is.na(GrossSalary), !is.na(RankGrp)) %>%
+ ggplot(aes(x = reorder(RankGrp, GrossSalary, median), y = GrossSalary, fill = RankGrp)) +
+ geom_boxplot(alpha = 0.8, show.legend = FALSE) +
+ geom_jitter(width = 0.2, alpha = 0.3, size = 2) +
+ coord_flip() +
+ scale_y_continuous(labels = dollar_format()) +
+ scale_fill_manual(values = aptc_palette) +
+ labs(title = "Gross Salary by Academic Rank", x = NULL, y = "Gross Salary") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+As expected, salary increases with rank progression. Full professors have the highest median salary, followed by associate and assistant professors.
+:::
+
+## Salary Summary Table
+
+```{r}
+salary_by_rank <- dat %>%
+ filter(!is.na(GrossSalary), !is.na(RankGrp)) %>%
+ group_by(RankGrp) %>%
+ summarise(N = n(), Mean = mean(GrossSalary), Median = median(GrossSalary),
+           SD = sd(GrossSalary), .groups = "drop") %>%
+ arrange(desc(Median))
+
+salary_by_rank %>%
+ mutate(Mean = dollar(round(Mean)), Median = dollar(round(Median)), 
+        SD = dollar(round(SD))) %>%
+ kable(col.names = c("Rank", "N", "Mean", "Median", "SD")) %>%
+ kable_styling(bootstrap_options = c("striped", "hover"), font_size = 20)
+```
+
+::: notes
+This table shows salary statistics by rank. Note that cells with fewer than 3 respondents are suppressed for privacy.
+:::
+
+## Salary by Contract Length
+
+```{r}
+dat %>%
+ filter(!is.na(GrossSalary), !is.na(ContractLength)) %>%
+ ggplot(aes(x = reorder(ContractLength, GrossSalary, median), y = GrossSalary, fill = ContractLength)) +
+ geom_boxplot(alpha = 0.8, show.legend = FALSE) +
+ geom_jitter(width = 0.2, alpha = 0.3, size = 2) +
+ coord_flip() +
+ scale_y_continuous(labels = dollar_format()) +
+ scale_fill_manual(values = aptc_palette) +
+ labs(title = "Salary by Contract Length", x = NULL, y = "Gross Salary") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Tenured and permanent positions tend to have higher salaries than yearly or multi-year contracts.
+:::
+
+## Salary by Position Type
+
+```{r}
+nz2 <- function(x) ifelse(is.na(x), "", x)
+is_tt2  <- function(x) str_detect(nz2(x), regex("tenure[- ]track|tenured(?!.*non)", ignore_case = TRUE)) & !str_detect(nz2(x), regex("non.?tenure", ignore_case = TRUE))
+is_ntt2 <- function(x) str_detect(nz2(x), regex("non.?tenure|clinical.?track|instructor|lecturer|visiting", ignore_case = TRUE))
+
+salary_postype <- dat %>%
+  filter(!is.na(GrossSalary), !is.na(PositionType)) %>%
+  mutate(
+    PosGroup = case_when(
+      is_tt2(PositionType) ~ "Tenure-Track/Tenured",
+      is_ntt2(PositionType) ~ "Non-Tenure-Track",
+      str_detect(nz2(PositionType), regex("admin|staff|director", ignore_case = TRUE)) ~ "Admin/Staff",
+      TRUE ~ "Other"
+    )
+  ) %>%
+  filter(PosGroup != "Other") %>%
+  group_by(PosGroup) %>%
+  summarise(N = n(), Mean = mean(GrossSalary), Median = median(GrossSalary), SD = sd(GrossSalary), .groups = "drop") %>%
+  arrange(desc(Median))
+
+salary_postype %>%
+  mutate(Mean = dollar(round(Mean)), Median = dollar(round(Median)), SD = dollar(round(SD))) %>%
+  kable(col.names = c("Position Type", "N", "Mean", "Median", "SD"),
+        caption = "Salary by Position Type") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), font_size = 20)
+```
+
+::: notes
+Admin/staff positions show the highest salaries, followed by tenure-track and then non-tenure-track positions. These differences reflect both rank and the nature of the roles.
+:::
+
+## Professional Development Funding
+
+:::::: columns
+::: {.column width="50%"}
+```{r}
+pd_dat <- dat %>%
+  mutate(
+    PD_access = case_when(
+      grepl("^Yes", PDFunds) ~ 1L,
+      PDFunds == "No" ~ 0L,
+      TRUE ~ NA_integer_
+    ),
+    PD_amount = suppressWarnings(as.numeric(PDFunds_2_TEXT)),
+    PD_amount = ifelse(PD_amount == -99, NA, PD_amount)
+  )
+
+pd_access_summary <- pd_dat %>%
+  filter(!is.na(PD_access)) %>%
+  mutate(AccessLabel = case_when(
+    PD_access == 1L ~ "Yes, consistently",
+    PD_access == 0L ~ "No",
+    TRUE ~ "Sometimes"
+  )) %>%
+  count(AccessLabel) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(pd_access_summary, aes(x = reorder(AccessLabel, Percentage), y = Percentage, fill = AccessLabel)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+  coord_flip() +
+  scale_fill_manual(values = aptc_palette) +
+  scale_y_continuous(limits = c(0, 90)) +
+  labs(title = "Professional Development Funding Access", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+
+:::: {.column width="50%"}
+```{r}
+pd_amount_stats <- pd_dat %>%
+  filter(PD_access == 1L, !is.na(PD_amount)) %>%
+  summarise(N = n(), Mean = mean(PD_amount), SD = sd(PD_amount),
+            Median = median(PD_amount), Min = min(PD_amount), Max = max(PD_amount))
+```
+
+### PD Funding Summary
+
+| Statistic | Value |
+|------------------------------------|------------------------------------|
+| N | `r pd_amount_stats$N` |
+| Mean | `r dollar(round(pd_amount_stats$Mean))` |
+| Median | `r dollar(round(pd_amount_stats$Median))` |
+| Range | `r dollar(pd_amount_stats$Min)` – `r dollar(pd_amount_stats$Max)` |
+
+::: callout-note
+Among those with consistent PD access.
+:::
+::::
+::::::
+
+::: notes
+Most directors receive some form of professional development funding. The median amount for those with consistent access provides important context for benchmarking.
+:::
+
+## Salary Funding Sources
+
+```{r}
+funding_labels <- c(
+  "FundingSrc_1" = "Department/University",
+  "FundingSrc_2" = "College",
+  "FundingSrc_3" = "Clinic Fees",
+  "FundingSrc_4" = "Individual Client Fees",
+  "FundingSrc_5" = "Grants",
+  "FundingSrc_6" = "Community Contracts",
+  "FundingSrc_7" = "Other"
+)
+
+funding_summary <- dat %>%
+  select(starts_with("FundingSrc_")) %>%
+  select(-contains("TEXT")) %>%
+  select(any_of(names(funding_labels))) %>%
+  summarise(across(everything(), ~sum(!is.na(.) & . != "0" & . != "", na.rm = TRUE))) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Count") %>%
+  mutate(Source = funding_labels[Variable]) %>%
+  filter(!is.na(Source)) %>%
+  mutate(Percentage = round(100 * Count / nrow(dat), 1)) %>%
+  arrange(desc(Count))
+
+ggplot(funding_summary, aes(x = reorder(Source, Count), y = Count, fill = Source)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(Count, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+  coord_flip() +
+  scale_fill_manual(values = aptc_palette) +
+  scale_x_discrete() +
+  scale_y_continuous(limits = c(0, max(funding_summary$Count) * 1.3)) +
+  labs(title = "Salary Funding Sources (Select All That Apply)", 
+       subtitle = "Note: % reflects proportion of all respondents endorsing each source",
+       x = NULL, y = "Count") +
+  theme_minimal(base_size = 16) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Department and university funds are by far the most common salary source. Only a minority receive salary funding from clinic fees or grants, highlighting the academic rather than fee-for-service structure of most training clinics.
+:::
+
+# Clinic Operations {background-color="#252b3b"}
+
+## Clinic Age & Training Model
+
+::::: columns
+::: {.column width="50%"}
+```{r}
+age_stats <- dat %>%
+ filter(!is.na(ClinicAge), ClinicAge >= 0) %>%
+ summarise(N = n(), Mean = mean(ClinicAge), Median = median(ClinicAge))
+
+dat %>%
+ filter(!is.na(ClinicAge), ClinicAge >= 0) %>%
+ ggplot(aes(x = ClinicAge)) +
+ geom_histogram(binwidth = 5, fill = aptc_teal, color = "white", alpha = 0.9) +
+ geom_vline(aes(xintercept = median(ClinicAge)), color = aptc_coral, 
+            linetype = "dashed", linewidth = 1.2) +
+ labs(title = "Clinic Age (Years)",
+      subtitle = paste0("Median = ", age_stats$Median, " years"),
+      x = "Years", y = "Count") +
+ theme_minimal(base_size = 14) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+model_summary <- dat %>%
+ filter(!is.na(ClinicTrainingModel)) %>%
+ count(ClinicTrainingModel) %>%
+ mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+ arrange(desc(n))
+
+ggplot(model_summary, aes(x = reorder(ClinicTrainingModel, n), y = Percentage, fill = ClinicTrainingModel)) +
+ geom_col(show.legend = FALSE) +
+ geom_text(aes(label = paste0(n, "\n(", Percentage, "%)")), hjust = -0.1, size = 4) +
+ coord_flip() +
+ scale_fill_manual(values = aptc_palette) +
+ scale_y_continuous(limits = c(0, 80)) +
+ labs(title = "Training Model", x = NULL, y = "Percentage (%)") +
+ theme_minimal(base_size = 14) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+:::::
+
+::: notes
+Most clinics have been operating for decades. The scientist-practitioner model remains the most common training approach.
+:::
+
+## Clinic Size: Clients & Trainees
+
+::::: columns
+::: {.column width="50%"}
+```{r}
+client_stats <- dat %>%
+ filter(!is.na(ClinicClientsCount), ClinicClientsCount > 0) %>%
+ summarise(N = n(), Mean = mean(ClinicClientsCount), Median = median(ClinicClientsCount))
+
+dat %>%
+ filter(!is.na(ClinicClientsCount), ClinicClientsCount > 0, ClinicClientsCount < 500) %>%
+ ggplot(aes(x = ClinicClientsCount)) +
+ geom_histogram(binwidth = 25, fill = aptc_coral, color = "white", alpha = 0.9) +
+ geom_vline(aes(xintercept = median(ClinicClientsCount)), color = aptc_navy, 
+            linetype = "dashed", linewidth = 1.2) +
+ labs(title = "Clients per Year",
+      subtitle = paste0("Median = ", round(client_stats$Median)),
+      x = "Number of Clients", y = "Count") +
+ theme_minimal(base_size = 14) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+trainee_stats <- dat %>%
+ filter(!is.na(ClinicTotalTrainees), ClinicTotalTrainees > 0) %>%
+ summarise(N = n(), Mean = mean(ClinicTotalTrainees), Median = median(ClinicTotalTrainees))
+
+dat %>%
+ filter(!is.na(ClinicTotalTrainees), ClinicTotalTrainees > 0) %>%
+ ggplot(aes(x = ClinicTotalTrainees)) +
+ geom_histogram(binwidth = 5, fill = aptc_teal, color = "white", alpha = 0.9) +
+ geom_vline(aes(xintercept = median(ClinicTotalTrainees)), color = aptc_coral, 
+            linetype = "dashed", linewidth = 1.2) +
+ labs(title = "Trainees per Year",
+      subtitle = paste0("Median = ", round(trainee_stats$Median)),
+      x = "Number of Trainees", y = "Count") +
+ theme_minimal(base_size = 14) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+:::::
+
+::: notes
+Clinic sizes vary considerably. The median clinic serves around 110 clients and trains approximately 15 students per year.
+:::
+
+## Clinic Space
+
+```{r}
+sqft_summary <- dat %>%
+ filter(!is.na(ClinSqFt)) %>%
+ count(ClinSqFt) %>%
+ mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(sqft_summary, aes(x = ClinSqFt, y = n, fill = ClinSqFt)) +
+ geom_col(show.legend = FALSE) +
+ geom_text(aes(label = paste0(n, "\n(", Percentage, "%)")), vjust = -0.2, size = 5) +
+ scale_fill_manual(values = aptc_palette) +
+ scale_y_continuous(limits = c(0, max(sqft_summary$n) * 1.3)) +
+ labs(title = "Clinic Space Distribution", 
+      subtitle = paste0("N = ", sum(sqft_summary$n)),
+      x = NULL, y = "Count") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy),
+       axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+::: notes
+Most clinics fall in the 1,000 to 5,000 square foot range, with the most common category being 2,000-4,999 square feet.
+:::
+
+## Staff Composition
+
+```{r}
+staff_presence <- dat %>%
+ summarise(
+   `Has Support Staff` = mean(as.numeric(ClinicSupportStaff) > 0, na.rm = TRUE) * 100,
+   `Has Grad Staff` = mean(as.numeric(GradStaff) > 0, na.rm = TRUE) * 100,
+   `Has Undergrad Staff` = mean(as.numeric(UgradStaff) > 0, na.rm = TRUE) * 100,
+   `Has Postdocs` = mean(as.numeric(PostdocCount) > 0, na.rm = TRUE) * 100
+ ) %>%
+ pivot_longer(everything(), names_to = "Staff Type", values_to = "Percentage")
+
+ggplot(staff_presence, aes(x = reorder(`Staff Type`, Percentage), y = Percentage, fill = `Staff Type`)) +
+ geom_col(show.legend = FALSE) +
+ geom_text(aes(label = paste0(round(Percentage, 0), "%")), hjust = -0.1, size = 5) +
+ coord_flip() +
+ scale_y_continuous(limits = c(0, 100)) +
+ scale_fill_manual(values = aptc_palette) +
+ labs(title = "Percentage of Clinics with Various Staff Types", x = NULL, y = "Percentage (%)") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Most clinics have support staff and graduate assistants. Fewer have undergraduate staff, and only about 9% have postdoctoral trainees.
+:::
+
+## Director Responsibilities
+
+```{r}
+resp_labels <- c(
+  "Responsibilities_1"  = "Administration",
+  "Responsibilities_2"  = "Teaching",
+  "Responsibilities_3"  = "Supervision",
+  "Responsibilities_4"  = "Direct Patient Services",
+  "Responsibilities_5"  = "Research",
+  "Responsibilities_6"  = "University/Department Service",
+  "Responsibilities_7"  = "Community/Professional Service",
+  "Responsibilities_8"  = "External Practicum Placements",
+  "Responsibilities_10" = "Official Mentoring",
+  "Responsibilities_11" = "Unofficial Mentoring",
+  "Responsibilities_13" = "Crisis Response",
+  "Responsibilities_14" = "Consulting",
+  "Responsibilities_15" = "Outreach"
+)
+
+resp_summary <- dat %>%
+  select(starts_with("Responsibilities_")) %>%
+  select(-contains("TEXT")) %>%
+  select(any_of(names(resp_labels))) %>%
+  summarise(across(everything(), ~sum(!is.na(.) & . != "0" & . != "", na.rm = TRUE))) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Count") %>%
+  mutate(Responsibility = resp_labels[Variable]) %>%
+  filter(!is.na(Responsibility)) %>%
+  mutate(Percentage = round(100 * Count / nrow(dat), 1)) %>%
+  arrange(desc(Count))
+
+ggplot(resp_summary, aes(x = reorder(Responsibility, Count), y = Count, fill = Responsibility)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(Count, " (", Percentage, "%)")), hjust = -0.1, size = 4.5) +
+  coord_flip() +
+  scale_fill_manual(values = rep(aptc_palette, length.out = nrow(resp_summary))) +
+  scale_y_continuous(limits = c(0, max(resp_summary$Count) * 1.3)) +
+  labs(title = "Director Responsibilities (Select All That Apply)", x = NULL, y = "Count") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Administration and supervision are near-universal responsibilities. Direct patient services, teaching, and research are also common, underscoring the multi-faceted nature of the clinic director role.
+:::
+
+## Clinic Hours & Coverage
+
+:::::: columns
+::: {.column width="50%"}
+```{r}
+hours_stats <- dat %>%
+  filter(!is.na(ClinicHours), ClinicHours > 0, ClinicHours <= 80) %>%
+  summarise(N = n(), Mean = round(mean(ClinicHours), 1), Median = median(ClinicHours),
+            Min = min(ClinicHours), Max = max(ClinicHours))
+
+dat %>%
+  filter(!is.na(ClinicHours), ClinicHours > 0, ClinicHours <= 80) %>%
+  ggplot(aes(x = ClinicHours)) +
+  geom_histogram(binwidth = 5, fill = aptc_teal, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(ClinicHours)), color = aptc_coral,
+             linetype = "dashed", linewidth = 1.2) +
+  labs(title = "Weekly Clinic Hours",
+       subtitle = paste0("Median = ", hours_stats$Median, " hrs | Mean = ", hours_stats$Mean, " hrs"),
+       x = "Hours per Week", y = "Count") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+
+:::: {.column width="50%"}
+### Hours Summary
+
+| Statistic | Value                                         |
+|-----------|-----------------------------------------------|
+| N         | `r hours_stats$N`                             |
+| Mean      | `r hours_stats$Mean` hrs/week                 |
+| Median    | `r hours_stats$Median` hrs/week               |
+| Range     | `r hours_stats$Min` – `r hours_stats$Max` hrs |
+
+::: callout-note
+Hours reflect clinic operating hours, not director work hours.
+:::
+::::
+::::::
+
+::: notes
+Most clinics operate approximately 40 hours per week. Some extend evening or weekend hours to serve student and community needs.
+:::
+
+## Clinical Supervisors & Caseloads
+
+::::: columns
+::: {.column width="50%"}
+```{r}
+supervisor_stats <- dat %>%
+  filter(!is.na(MaxTraineeCount), MaxTraineeCount > 0) %>%
+  summarise(N = n(), Mean = round(mean(MaxTraineeCount), 1), 
+            Median = median(MaxTraineeCount),
+            Min = min(MaxTraineeCount), Max = max(MaxTraineeCount))
+
+dat %>%
+  filter(!is.na(MaxTraineeCount), MaxTraineeCount > 0, MaxTraineeCount <= 50) %>%
+  ggplot(aes(x = MaxTraineeCount)) +
+  geom_histogram(binwidth = 2, fill = aptc_coral, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(MaxTraineeCount)), color = aptc_navy,
+             linetype = "dashed", linewidth = 1.2) +
+  labs(title = "Max Trainees per Supervisor",
+       subtitle = paste0("Median = ", supervisor_stats$Median),
+       x = "Number of Trainees", y = "Count") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+
+::: {.column width="50%"}
+### Student Caseload
+
+```{r}
+caseload_data <- dat %>%
+  summarise(
+    `Max Therapy Trainees` = paste0(round(mean(MaxTraineesTherapy, na.rm=TRUE), 1), 
+                                    " (Mdn = ", median(MaxTraineesTherapy, na.rm=TRUE), ")"),
+    `Max Assessment Trainees` = paste0(round(mean(MaxTraineesAssmnt, na.rm=TRUE), 1), 
+                                       " (Mdn = ", median(MaxTraineesAssmnt, na.rm=TRUE), ")"),
+    `Max Therapy Cases` = paste0(round(mean(MaxTxCasesAllow, na.rm=TRUE), 1), 
+                                 " (Mdn = ", median(MaxTxCasesAllow, na.rm=TRUE), ")"),
+    `Max Assessment Cases` = paste0(round(mean(MaxAxCasesAllow, na.rm=TRUE), 1), 
+                                    " (Mdn = ", median(MaxAxCasesAllow, na.rm=TRUE), ")")
+  ) %>%
+  pivot_longer(everything(), names_to = "Metric", values_to = "Value")
+
+caseload_data %>%
+  kable(col.names = c("Metric", "Mean (Median)"),
+        caption = "Student Caseload & Supervisor Team Size") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), font_size = 18)
+```
+:::
+:::::
+
+::: notes
+These metrics help clinics benchmark their caseload expectations against peers. High trainee-to-supervisor ratios can affect training quality and supervisor wellbeing.
+:::
+
+# Services & Fees {background-color="#252b3b"}
+
+## Services Offered
+
+:::::: columns
+::: {.column width="50%"}
+```{r}
+therapy_pct <- sum(dat$ClinicTherapyBinary == "Yes", na.rm = TRUE) / 
+              sum(!is.na(dat$ClinicTherapyBinary)) * 100
+assess_pct <- sum(dat$ClinicAssmntBinary == "Yes", na.rm = TRUE) / 
+             sum(!is.na(dat$ClinicAssmntBinary)) * 100
+
+services <- tibble(
+ Service = c("Therapy", "Assessment"),
+ Percentage = c(therapy_pct, assess_pct)
+)
+
+ggplot(services, aes(x = Service, y = Percentage, fill = Service)) +
+ geom_col(show.legend = FALSE) +
+ geom_text(aes(label = paste0(round(Percentage, 0), "%")), vjust = -0.5, size = 6) +
+ scale_y_continuous(limits = c(0, 110)) +
+ scale_fill_manual(values = c(aptc_teal, aptc_coral)) +
+ labs(title = "Services Offered", x = NULL, y = "Percentage (%)") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+
+:::: {.column width="50%"}
+### Service Highlights
+
+-   **`r round(therapy_pct)`%** offer therapy
+-   **`r round(assess_pct)`%** offer assessment
+-   Most clinics offer both services
+
+```{r}
+sliding <- sum(dat$ClinicSlidingScale == "Yes", na.rm = TRUE) / 
+          sum(!is.na(dat$ClinicSlidingScale)) * 100
+```
+
+::: callout-tip
+**`r round(sliding)`%** of clinics use sliding scale fees
+:::
+::::
+::::::
+
+::: notes
+Nearly all clinics offer therapy services, with assessment also being very common. The majority use sliding scale fee structures.
+:::
+
+## Clinic Revenue
+
+```{r}
+revenue_stats <- dat %>%
+ filter(!is.na(ClinicRevenue), ClinicRevenue > 0) %>%
+ summarise(N = n(), Mean = mean(ClinicRevenue), Median = median(ClinicRevenue),
+           Min = min(ClinicRevenue), Max = max(ClinicRevenue))
+
+dat %>%
+ filter(!is.na(ClinicRevenue), ClinicRevenue > 0, ClinicRevenue < 500000) %>%
+ ggplot(aes(x = ClinicRevenue)) +
+ geom_histogram(binwidth = 25000, fill = aptc_teal, color = "white", alpha = 0.9) +
+ geom_vline(aes(xintercept = median(ClinicRevenue)), color = aptc_coral, 
+            linetype = "dashed", linewidth = 1.2) +
+ scale_x_continuous(labels = dollar_format()) +
+ labs(title = "Annual Clinic Revenue",
+      subtitle = paste0("Median = ", dollar(revenue_stats$Median), " (N = ", revenue_stats$N, ")"),
+      x = "Revenue", y = "Count") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Median clinic revenue is approximately \$44,000, though there is substantial variation. Some clinics generate over \$500,000 annually.
+:::
+
+## Fee Structures
+
+```{r}
+therapy_fee_vars <- c("ClinicTherapyFees_1", "ClinicTherapyFees_2", "ClinicTherapyFees_3")
+assmnt_fee_vars  <- c("ClinicAssmntFees_1", "ClinicAssmntFees_2", "ClinicAssmntFees_3")
+
+fee_summary <- function(vars, service_name) {
+  dat %>%
+    select(all_of(vars)) %>%
+    pivot_longer(everything(), names_to = "Variable", values_to = "Value") %>%
+    filter(!is.na(Value), Value > 0, Value < 10000) %>%
+    mutate(FeeType = case_when(
+      str_detect(Variable, "_1$") ~ "Minimum",
+      str_detect(Variable, "_2$") ~ "Maximum",
+      str_detect(Variable, "_3$") ~ "Typical"
+    )) %>%
+    group_by(FeeType) %>%
+    summarise(N = n(), Mean = round(mean(Value), 0), Median = round(median(Value), 0), .groups = "drop") %>%
+    mutate(Service = service_name)
+}
+
+therapy_fees <- fee_summary(therapy_fee_vars, "Therapy")
+assmnt_fees  <- fee_summary(assmnt_fee_vars, "Assessment")
+
+bind_rows(therapy_fees, assmnt_fees) %>%
+  select(Service, FeeType, N, Mean, Median) %>%
+  mutate(Mean = dollar(Mean), Median = dollar(Median)) %>%
+  kable(col.names = c("Service", "Fee Type", "N", "Mean", "Median"),
+        caption = "Standard Fee Structures") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), font_size = 18) %>%
+  collapse_rows(columns = 1, valign = "top")
+```
+
+::: notes
+Assessment fees are considerably higher than therapy fees, reflecting the time and materials involved. Most clinics use sliding scale structures, making these maximums rarely charged.
+:::
+
+## Insurance Billing
+
+```{r}
+if ("ClinicBillBinary" %in% names(dat)) {
+  insur_summary <- dat %>%
+    filter(!is.na(ClinicBillBinary)) %>%
+    count(ClinicBillBinary) %>%
+    mutate(Percentage = round(100 * n / sum(n), 1))
+
+  ggplot(insur_summary, aes(x = ClinicBillBinary, y = Percentage, fill = ClinicBillBinary)) +
+    geom_col(show.legend = FALSE) +
+    geom_text(aes(label = paste0(n, " (", Percentage, "%)")), vjust = -0.3, size = 6) +
+    scale_y_continuous(limits = c(0, 100)) +
+    scale_fill_manual(values = aptc_palette) +
+    labs(title = "Insurance Billing", x = NULL, y = "Percentage (%)") +
+    theme_minimal(base_size = 16) +
+    theme(plot.title = element_text(face = "bold", color = aptc_navy))
+} else {
+  cat("Insurance billing variable not found in this dataset.\n")
+}
+```
+
+::: notes
+Very few training clinics bill insurance, keeping administrative overhead low while maintaining accessible services through sliding scale fees.
+:::
+
+# Technology {background-color="#252b3b"}
+
+## EMR & Telehealth Adoption
+
+::::: columns
+::: {.column width="50%"}
+```{r}
+emr_summary <- dat %>%
+ filter(!is.na(EMRbinary)) %>%
+ count(EMRbinary) %>%
+ mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(emr_summary, aes(x = EMRbinary, y = Percentage, fill = EMRbinary)) +
+ geom_col(show.legend = FALSE) +
+ geom_text(aes(label = paste0(n, "\n(", Percentage, "%)")), vjust = -0.3, size = 5) +
+ scale_y_continuous(limits = c(0, 100)) +
+ scale_fill_manual(values = c("Yes" = aptc_teal, "No" = aptc_coral)) +
+ labs(title = "EMR Usage", x = NULL, y = "Percentage (%)") +
+ theme_minimal(base_size = 14) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+telehealth_summary <- dat %>%
+ filter(!is.na(Telehealth)) %>%
+ count(Telehealth) %>%
+ mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(telehealth_summary, aes(x = Telehealth, y = Percentage, fill = Telehealth)) +
+ geom_col(show.legend = FALSE) +
+ geom_text(aes(label = paste0(n, "\n(", Percentage, "%)")), vjust = -0.3, size = 5) +
+ scale_y_continuous(limits = c(0, 100)) +
+ scale_fill_manual(values = aptc_palette) +
+ labs(title = "Telehealth Services", x = NULL, y = "Percentage (%)") +
+ theme_minimal(base_size = 14) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+:::::
+
+::: notes
+Most clinics have adopted electronic medical records and offer telehealth services, reflecting the ongoing digital transformation in healthcare training.
+:::
+
+## Artificial Intelligence in Clinics
+
+::::: columns
+::: {.column width="50%"}
+```{r}
+ai_clindir <- dat %>%
+  filter(!is.na(AIUseClinDir)) %>%
+  count(AIUseClinDir) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(ai_clindir, aes(x = AIUseClinDir, y = Percentage, fill = AIUseClinDir)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), vjust = -0.3, size = 5) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "Director AI Use", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+ai_students <- dat %>%
+  filter(!is.na(AIUseStudentsAllowed)) %>%
+  count(AIUseStudentsAllowed) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(ai_students, aes(x = AIUseStudentsAllowed, y = Percentage, fill = AIUseStudentsAllowed)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), vjust = -0.3, size = 5) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "Students Allowed to Use AI", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+:::
+:::::
+
+::: notes
+AI adoption among clinic directors remains limited—only about 13% report using AI in their responsibilities. Student AI use policies are still evolving, with many clinics having no formal policy in place.
+:::
+
+## AI Policy Status
+
+```{r}
+ai_policy <- dat %>%
+  filter(!is.na(AIPolicy)) %>%
+  count(AIPolicy) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+ggplot(ai_policy, aes(x = reorder(AIPolicy, n), y = Percentage, fill = AIPolicy)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+  coord_flip() +
+  scale_fill_manual(values = aptc_palette) +
+  scale_y_continuous(limits = c(0, 80)) +
+  labs(title = "Clinic AI Policy Status", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 16) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: callout-important
+Most clinics do not yet have a formal AI policy. Many noted this is an upcoming priority.
+:::
+
+::: notes
+The absence of formal AI policies mirrors broader trends in healthcare and academia. Clinics are navigating this space carefully, balancing innovation with ethical training considerations.
+:::
+
+## Routine Outcome Monitoring (ROM)
+
+```{r}
+rom_labels <- c(
+  "ROMsystem_1" = "OQ-45",
+  "ROMsystem_2" = "PHQ-9/GAD-7",
+  "ROMsystem_3" = "PCOMS/ORS",
+  "ROMsystem_4" = "Standardized Assessment Battery",
+  "ROMsystem_5" = "Custom/Clinic-developed",
+  "ROMsystem_6" = "Other"
+)
+
+rom_summary <- dat %>%
+  select(starts_with("ROMsystem_")) %>%
+  select(-contains("TEXT")) %>%
+  select(any_of(names(rom_labels))) %>%
+  summarise(across(everything(), ~sum(!is.na(.) & . != "0" & . != "", na.rm = TRUE))) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Count") %>%
+  mutate(System = rom_labels[Variable]) %>%
+  filter(!is.na(System)) %>%
+  mutate(Percentage = round(100 * Count / nrow(dat), 1)) %>%
+  arrange(desc(Count))
+
+if (nrow(rom_summary) > 0) {
+  ggplot(rom_summary, aes(x = reorder(System, Count), y = Count, fill = System)) +
+    geom_col(show.legend = FALSE) +
+    geom_text(aes(label = paste0(Count, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+    coord_flip() +
+    scale_fill_manual(values = aptc_palette) +
+    scale_y_continuous(limits = c(0, max(rom_summary$Count) * 1.4)) +
+    labs(title = "ROM Systems Used (Select All That Apply)", x = NULL, y = "Count") +
+    theme_minimal(base_size = 16) +
+    theme(plot.title = element_text(face = "bold", color = aptc_navy))
+} else {
+  cat("ROM system data not available in this dataset.\n")
+}
+```
+
+::: notes
+PHQ-9/GAD-7 and OQ-45 are among the most commonly used outcome monitoring tools. Routine outcome monitoring supports both training quality and client care.
+:::
+
+# Social Justice & DEI {background-color="#252b3b"}
+
+## Social Justice & DEI Efforts
+
+```{r}
+sj_labels <- c(
+  "ClinicSJActivities_1" = "Resources on antiracism – students",
+  "ClinicSJActivities_2" = "Resources on antiracism – supervisors",
+  "ClinicSJActivities_3" = "New/specialized services for BIPOC clients",
+  "ClinicSJActivities_4" = "Outreach to marginalized communities",
+  "ClinicSJActivities_5" = "Added DEI didactics/training",
+  "ClinicSJActivities_6" = "Significant changes to syllabi",
+  "ClinicSJActivities_7" = "New supervisors/instructors for DEI",
+  "ClinicSJActivities_8" = "CCTC toolkit on social responsiveness",
+  "ClinicSJActivities_9" = "Other"
+)
+
+sj_summary <- dat %>%
+  select(starts_with("ClinicSJActivities_")) %>%
+  select(-contains("TEXT")) %>%
+  select(any_of(names(sj_labels))) %>%
+  summarise(across(everything(), ~sum(!is.na(.) & . != "0" & . != "", na.rm = TRUE))) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Count") %>%
+  mutate(Activity = sj_labels[Variable]) %>%
+  filter(!is.na(Activity)) %>%
+  mutate(Percentage = round(100 * Count / nrow(dat), 1)) %>%
+  arrange(desc(Count))
+
+ggplot(sj_summary, aes(x = reorder(Activity, Count), y = Count, fill = Activity)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(Count, " (", Percentage, "%)")), hjust = -0.1, size = 4.5) +
+  coord_flip() +
+  scale_fill_manual(values = rep(aptc_palette, length.out = nrow(sj_summary))) +
+  scale_y_continuous(limits = c(0, max(sj_summary$Count) * 1.4)) +
+  labs(title = "Social Justice & DEI Activities (Select All That Apply)", x = NULL, y = "Count") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+DEI-focused didactics and antiracism resources for students are the most commonly reported activities. These data track ongoing commitment to social justice across APTC member clinics.
+:::
+
+## Research Activity
+
+```{r}
+research_summary <- dat %>%
+  filter(!is.na(ResearchActive)) %>%
+  count(ResearchActive) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(research_summary, aes(x = reorder(ResearchActive, n), y = Percentage, fill = ResearchActive)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
+  coord_flip() +
+  scale_fill_manual(values = aptc_palette) +
+  scale_y_continuous(limits = c(0, 80)) +
+  labs(title = "Research Activity in Clinic", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 16) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: callout-note
+Major research themes include clinical outcomes, measurement-based care, telehealth, and training evaluation.
+:::
+
+::: notes
+About half of directors report being research-active in their clinics. Common themes include clinical outcomes research, ROM/measurement-based care, specialized populations, and implementation science.
+:::
+
+# Director Wellbeing {background-color="#252b3b"}
+
+## Burnout Indicators
+
+```{r}
+burnout_items <- c(
+ "Burnout_1" = "Emotional exhaustion",
+ "Burnout_2" = "Depersonalization", 
+ "Burnout_3" = "Reduced accomplishment",
+ "Burnout_4" = "Work-life conflict",
+ "Burnout_5" = "Intent to leave"
+)
+
+burnout_summary <- dat %>%
+ select(starts_with("Burnout_")) %>%
+ pivot_longer(everything(), names_to = "Item", values_to = "Score") %>%
+ filter(!is.na(Score)) %>%
+ group_by(Item) %>%
+ summarise(N = n(), Mean = mean(Score), SD = sd(Score), .groups = "drop") %>%
+ mutate(Label = burnout_items[Item])
+
+ggplot(burnout_summary, aes(x = reorder(Label, Mean), y = Mean, fill = Label)) +
+ geom_col(show.legend = FALSE) +
+ geom_errorbar(aes(ymin = Mean - SD, ymax = Mean + SD), width = 0.2, color = aptc_navy) +
+ geom_text(aes(label = round(Mean, 1)), hjust = -0.3, size = 5) +
+ coord_flip() +
+ scale_fill_manual(values = aptc_palette) +
+ scale_y_continuous(limits = c(0, 6)) +
+ labs(title = "Burnout Indicators",
+      subtitle = "Mean scores (error bars = ±1 SD)",
+      x = NULL, y = "Mean Score") +
+ theme_minimal(base_size = 16) +
+ theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Burnout scores vary across dimensions. These indicators help us understand the challenges clinic directors face and can inform support initiatives.
+:::
+
+## Burnout by Position Type
+
+```{r}
+nz3 <- function(x) ifelse(is.na(x), "", x)
+is_tt3  <- function(x) str_detect(nz3(x), regex("tenure[- ]track|tenured(?!.*non)", ignore_case = TRUE)) & !str_detect(nz3(x), regex("non.?tenure", ignore_case = TRUE))
+is_ntt3 <- function(x) str_detect(nz3(x), regex("non.?tenure|clinical.?track|instructor|lecturer|visiting", ignore_case = TRUE))
+
+burnout_by_pos <- dat %>%
+  filter(!is.na(PositionType)) %>%
+  mutate(
+    Burnout_Composite = rowMeans(select(., starts_with("Burnout_")), na.rm = TRUE),
+    TenureStatus = case_when(
+      is_tt3(PositionType) ~ "TT/Tenured",
+      is_ntt3(PositionType) ~ "Non-Tenure-Track",
+      TRUE ~ "Other/Admin"
+    )
+  ) %>%
+  filter(!is.na(Burnout_Composite)) %>%
+  group_by(TenureStatus) %>%
+  summarise(N = n(), Mean = round(mean(Burnout_Composite), 2), 
+            SD = round(sd(Burnout_Composite), 2), .groups = "drop")
+
+ggplot(burnout_by_pos, aes(x = TenureStatus, y = Mean, fill = TenureStatus)) +
+  geom_col(show.legend = FALSE) +
+  geom_errorbar(aes(ymin = Mean - SD, ymax = Mean + SD), width = 0.3, color = aptc_navy) +
+  geom_text(aes(label = paste0(round(Mean, 2), "\n(n=", N, ")")), vjust = -0.5, size = 5) +
+  scale_y_continuous(limits = c(0, 6)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "Composite Burnout by Position Type",
+       subtitle = "Mean scores (error bars = ±1 SD) | Scale: 0–6",
+       x = NULL, y = "Mean Burnout Score") +
+  theme_minimal(base_size = 16) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+::: notes
+Comparing burnout across position types can reveal whether institutional security affects wellbeing. Higher scores indicate greater burnout.
+:::
+
+## What Helps & What Challenges Us
+
+::::: columns
+::: {.column width="50%"}
+### The Good ✓
+
+-   Mentoring & training students
+-   Supportive colleagues & department
+-   Making a meaningful impact
+-   Autonomy & flexibility in the role
+-   Variety & engagement in work
+:::
+
+::: {.column width="50%"}
+### The Challenging ✗
+
+-   High workload & administrative burden
+-   Lack of institutional support
+-   Challenges with students & supervisees
+-   Bureaucracy & institutional barriers
+-   Pay disparities & lack of recognition
+:::
+:::::
+
+::: callout-note
+These themes reflect open-ended survey responses and are consistent with patterns seen in prior years.
+:::
+
+::: notes
+The same aspects of the job that directors find positive can also contribute to burnout when poorly supported—particularly supervision and student relationships. Colleagues and institutional support make a substantial difference.
+:::
+
+# Qualitative Findings {background-color="#252b3b"}
+
+## Burnout & Satisfaction
+
+![](aptc_2026_presentation_expanded_files/slide_burnout.PNG){width="100%" height="100%"}
+
+## Lessons from the Past
+
+![](aptc_2026_presentation_expanded_files/slide_lessons.PNG){width="100%" height="100%"}
+
+## Supporting New Directors
+
+![](aptc_2026_presentation_expanded_files/slide_newdirectors.PNG){width="100%" height="100%"}
+
+## Best Part of Your Job
+
+![](aptc_2026_presentation_expanded_files/slide_bestpart.PNG){width="100%" height="100%"}
+
+# Summary {background-color="#252b3b"}
+
+## Key Takeaways
+
+::::: columns
+::: {.column width="50%"}
+### Sample & Position
+
+- **`r nrow(dat)`** respondents; mostly faculty
+- Median **`r role_stats$Median`** years in role
+- Most hold non-tenure-track positions
+- Majority report to department chair
+:::
+
+::: {.column width="50%"}
+### Compensation
+
+- Median salary: **`r dollar(salary_stats$Median)`**
+- Clear progression by rank
+- Most receive PD funding
+- Salary funded mainly by dept/university
+:::
+:::::
+
+## Key Takeaways (cont.)
+
+::::: columns
+::: {.column width="50%"}
+### Clinic Operations
+
+- Median **`r round(client_stats$Median)`** clients/year
+- Therapy + assessment; 89% sliding scale
+- EMR: 92%, telehealth: 94%
+- AI adoption limited (~13%)
+:::
+
+::: {.column width="50%"}
+### Wellbeing & Mission
+
+- ~75% support staff; ~67% grad assistants
+- DEI/SJ activities widespread
+- Burnout present; meaning intact
+- Colleagues and autonomy are protective
+:::
+:::::
+
+## Now to Hear From You: Survey Input
+
+::::: columns
+::: {.column width="50%"}
+**Was the survey too long?**
+
+- 36% — no, length is fine
+- 49% — yes, but necessary
+- 11% — yes, shorten it
+
+**Other feedback**
+
+- Every other year? Little variation year to year
+- Q & A: what questions do you have for us?
+:::
+
+::: {.column width="50%"}
+**What do you want to see more of? Less of?**
+
+- "More on unit (workload assignments) and salary data"
+- "Bilingual service provision (student support, supervision, etc.)"
+- Less "details of how many students are supervised"
+- "You gotta do whatcha gotta do" 😊
+:::
+:::::
+
+## {background-color="white"}
+
+<div style="display:flex; justify-content:center; align-items:center; height:70vh; flex-direction:column; gap:1.5rem; text-align:center;">
+<h2>Now over to you...</h2>
+<p style="font-size:1.4em;">Let's Discuss.</p>
+<p style="font-size:1.2em; font-style:italic;">Richard will help manage the room!</p>
+</div>
+
+## Contact Us {background-color="#252b3b"}
+
+::::: columns
+::: {.column width="60%"}
+**Jacqueline Hersh, Ph.D.**
+Research Committee Co-Chair
+
+**Ryan L. Farmer, Ph.D.**
+Research Committee Co-Chair
+
+**Richard LeBeau, Ph.D.**
+Research Committee Member
+:::
+
+::: {.column width="40%"}
+### Resources
+
+- Full analysis report coming soon
+- Data requests: Contact Research Committee
+- [aptc.org](https://aptc.org)
+:::
+:::::
+
+::: notes
+Thank you for your attention. We welcome questions and encourage members to reach out with data requests or suggestions for future surveys.
+:::

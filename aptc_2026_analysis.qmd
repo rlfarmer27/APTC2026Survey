@@ -1,0 +1,1526 @@
+---
+title: "Psychology Training Clinics: 2026 APTC Comprehensive Analysis"
+author: "Jacqueline Hersh, Ph.D. & Ryan L. Farmer, Ph.D."
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-float: true
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    theme: cosmo
+    df-print: paged
+    fig-width: 10
+    fig-height: 6
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center"
+)
+
+# -----------------------------
+# APTC Color System
+# -----------------------------
+
+# Core brand colors
+aptc_navy  <- "#252b3b"
+aptc_coral <- "#ff6544"
+aptc_teal  <- "#31a8c0"
+aptc_white <- "#ffffff"
+
+# Extended categorical palette (9 colors, stable + on-brand)
+aptc_palette <- c(
+  aptc_coral,   # coral
+  "#ff8f77",    # light coral
+  "#e24f33",    # dark coral
+
+  aptc_teal,    # teal
+  "#5bc0d4",    # light teal
+  "#1f7f92",    # dark teal
+
+  aptc_navy,    # navy
+  "#454d5f",    # light navy
+  "#161b29"     # dark navy
+)
+
+# Binary palette (Yes / No, True / False, etc.)
+aptc_binary <- c(
+  aptc_teal,
+  aptc_coral
+)
+
+# Sequential palette (low -> high)
+aptc_sequential <- colorRampPalette(
+  c(aptc_white, aptc_teal, aptc_navy)
+)(100)
+
+```
+
+# Setup and Data Loading
+
+## Load Libraries
+
+```{r libraries}
+library(readxl)
+library(tidyverse)
+library(freqtables)
+library(skimr)
+library(scales)
+library(gt)
+library(knitr)
+library(kableExtra)
+library(patchwork)
+library(viridis)
+```
+
+## Load Data
+
+```{r load-data}
+
+library(readxl)
+dat <- read_excel("dat.xlsx")
+dat <- dat[-1, ]
+library(dplyr)
+library(stringr)
+
+dat <- dat %>%
+  mutate(
+    across(where(is.numeric), ~ na_if(., -99)),
+    across(where(is.character), ~ na_if(., "-99")),
+    across(where(is.character), str_trim)
+  )
+
+
+
+# -----------------------------
+# GLOBAL DATA CLEANING (FIXED)
+# -----------------------------
+
+dat <- dat %>%
+  # 1. Replace -99 with NA in numeric columns
+  mutate(
+    across(
+      where(is.numeric),
+      ~ na_if(., -99)
+    )
+  ) %>%
+
+  # 2. Replace "-99" with NA in character columns
+  mutate(
+    across(
+      where(is.character),
+      ~ na_if(., "-99")
+    )
+  ) %>%
+
+  # 3. Remove question text accidentally stored as values
+  mutate(
+    across(
+      where(is.character),
+      ~ if_else(
+        str_detect(
+          .,
+          regex(
+            "(\\?$)|(^what is )|(^last )|(^during )|(^in the last )",
+            ignore_case = TRUE
+          )
+        ),
+        NA_character_,
+        .
+      )
+    )
+  ) %>%
+
+  # 4. Trim whitespace
+  mutate(
+    across(where(is.character), str_trim)
+  ) %>%
+
+  # 5. Normalize binary variables
+  mutate(
+    across(
+      matches("Binary$"),
+      ~ case_when(
+        str_detect(., regex("^yes$", ignore_case = TRUE)) ~ "Yes",
+        str_detect(., regex("^no$",  ignore_case = TRUE)) ~ "No",
+        TRUE ~ NA_character_
+      )
+    )
+  ) %>%
+
+  # 6. Preserve your explicit numeric coercions
+  mutate(
+    Progress = as.numeric(Progress),
+    Duration = as.numeric(`Duration (in seconds)`),
+    GrossSalary = as.numeric(GrossSalary),
+    FTESalary = as.numeric(FTESalary),
+    RoleDuration = as.numeric(RoleDuration),
+    ClinicDuration = as.numeric(ClinicDuration),
+    ClinicAge = as.numeric(ClinicAge),
+    HoursWorkClinic = as.numeric(HoursWorkClinic),
+    CoursesTaught = as.numeric(CoursesTaught),
+    CourseCreditHours = as.numeric(CourseCreditHours),
+    ClinicTotalTrainees = as.numeric(ClinicTotalTrainees),
+    ClinicClientsCount = as.numeric(ClinicClientsCount),
+    NumRooms = as.numeric(NumRooms),
+    ClinSqFt = as.numeric(ClinSqFt),
+    SupTraineeCount = as.numeric(SupTraineeCount),
+    MaxTraineeCount = as.numeric(MaxTraineeCount),
+    HoursSupTherapy = as.numeric(HoursSupTherapy),
+    HoursSupAssmnt = as.numeric(HoursSupAssmnt),
+    HoursSupSup = as.numeric(HoursSupSup),
+    HoursWatching = as.numeric(HoursWatching),
+    HoursReviewingDoc = as.numeric(HoursReviewingDoc),
+    MaxTraineesTherapy = as.numeric(MaxTraineesTherapy),
+    MaxTraineesAssmnt = as.numeric(MaxTraineesAssmnt),
+    TxLength = as.numeric(TxLength),
+    MaxTxCasesAllow = as.numeric(MaxTxCasesAllow),
+    MaxAxCasesAllow = as.numeric(MaxAxCasesAllow),
+    ClinicRevenue = as.numeric(ClinicRevenue),
+    ClinicTxRevenue = as.numeric(ClinicTxRevenue),
+    ClinicAxRevenue = as.numeric(ClinicAxRevenue),
+    Burnout_1 = as.numeric(Burnout_1),
+    Burnout_2 = as.numeric(Burnout_2),
+    Burnout_3 = as.numeric(Burnout_3),
+    Burnout_4 = as.numeric(Burnout_4),
+    Burnout_5 = as.numeric(Burnout_5)
+  )
+
+
+
+# Display sample info
+cat("Total respondents:", nrow(dat), "\n")
+cat("Number of variables:", ncol(dat), "\n")
+```
+
+## Helper Functions
+
+```{r helpers}
+# Function to handle NA as empty string
+nz <- function(x) ifelse(is.na(x), "", x)
+
+# Functions to identify tenure-track status
+is_ntt <- function(x) {
+  s <- nz(x)
+  str_detect(s, regex("\\bnon[- ]?tenure\\b", ignore_case = TRUE)) |
+    str_detect(s, regex("\\b(adjunct|lecturer|teaching|clinical)\\b", ignore_case = TRUE))
+}
+
+is_tt <- function(x) {
+  s <- nz(x)
+  str_detect(s, regex("\\b(tenured|tenure[- ]?track)\\b", ignore_case = TRUE)) &
+    !is_ntt(x)
+}
+
+# Prepare salary data
+dat_simple <- dat %>%
+  mutate(
+    # Parse salary
+    GrossSalary = parse_number(as.character(GrossSalary)),
+    GrossSalary = ifelse(is.na(GrossSalary) | GrossSalary <= 0, NA_real_, GrossSalary),
+    
+    # FT/PT
+    FullPart = case_when(
+      str_detect(nz(FullPart), regex("part", ignore_case = TRUE)) ~ "Part-time",
+      str_detect(nz(FullPart), regex("full", ignore_case = TRUE)) ~ "Full-time",
+      TRUE ~ NA_character_
+    ),
+    
+    # Rank groups
+    RankGrp = case_when(
+      str_detect(nz(Rank), regex("^Assistant", ignore_case = TRUE)) ~ "Assistant Professor",
+      str_detect(nz(Rank), regex("^Associate", ignore_case = TRUE)) ~ "Associate Professor",
+      str_detect(nz(Rank), regex("^Full", ignore_case = TRUE)) ~ "Full Professor",
+      str_detect(nz(RoleTitle), regex("lecturer", ignore_case = TRUE)) |
+      str_detect(nz(PositionType), regex("lecturer", ignore_case = TRUE)) ~ "Lecturer",
+      str_detect(nz(RoleTitle), regex("staff", ignore_case = TRUE)) ~ "Staff (N/A)",
+      !is.na(Rank) ~ "Other (specified)",
+      TRUE ~ "Unspecified Rank"
+    ),
+    RankGrp = factor(
+      RankGrp,
+      levels = c("Assistant Professor", "Associate Professor", "Full Professor",
+                 "Lecturer", "Staff (N/A)", "Other (specified)", "Unspecified Rank")
+    )
+  )
+```
+
+## Data Quality Checks
+
+```{r data-quality-checks}
+# Sample size verification
+sample_summary <- data.frame(
+  Metric = c("Total Responses", "Finished Responses", "Progress = 100%", 
+             "Final Analytic Sample"),
+  Count = c(
+    nrow(read_excel("dat.xlsx")),
+    sum(dat$Finished == "True", na.rm = TRUE),
+    sum(dat$Progress == 100, na.rm = TRUE),
+    nrow(dat)
+  )
+)
+
+sample_summary %>%
+  kable(caption = "Sample Size Verification") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+# Check key categorical variables
+cat("\n=== Membership Status ===\n")
+print(table(dat$MemStatus, useNA = "always"))
+
+cat("\n=== Professional Degree ===\n")
+print(table(dat$ProfDeg, useNA = "always"))
+
+cat("\n=== Teaching Binary ===\n")
+print(table(dat$TeachingBinary, useNA = "always"))
+
+cat("\n=== EMR Binary ===\n")
+print(table(dat$EMRbinary, useNA = "always"))
+
+cat("\n=== Position Type (first 5 unique values) ===\n")
+print(head(sort(table(dat$PositionType, useNA = "always"), decreasing = TRUE), 5))
+```
+
+### Missing Data Analysis
+
+```{r missing-data-analysis}
+# Calculate missing data for key variables
+key_vars <- c(
+  "GrossSalary", "FTESalary", "RoleDuration", "ClinicDuration",
+  "Rank", "PositionType", "FullPart", "ContractLength",
+  "TeachingBinary", "CoursesTaught",
+  "ClinicAge", "ClinicTrainingModel", "ClinicTotalTrainees", "ClinicClientsCount",
+  "ClinicRevenue", "ClinicSlidingScale",
+  "EMRbinary", "Telehealth", "ResearchActive",
+  "Burnout_1", "MaxTraineeCount"
+)
+
+missing_summary <- dat %>%
+  select(any_of(key_vars)) %>%
+  summarise(across(everything(), ~sum(is.na(.)))) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Missing_Count") %>%
+  mutate(
+    Total = nrow(dat),
+    Percent_Missing = round(100 * Missing_Count / Total, 1),
+    Percent_Complete = 100 - Percent_Missing
+  ) %>%
+  arrange(desc(Percent_Missing))
+
+missing_summary %>%
+  filter(Missing_Count > 0) %>%
+  kable(caption = "Missing Data Summary (Variables with Any Missing Data)") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+# Flag high missing rates
+high_missing <- missing_summary %>%
+  filter(Percent_Missing > 20)
+
+if (nrow(high_missing) > 0) {
+  cat("\n⚠️ WARNING: The following variables have >20% missing data:\n")
+  print(high_missing %>% select(Variable, Percent_Missing))
+}
+```
+
+### Numeric Data Range Checks
+
+```{r numeric-range-checks}
+# Salary checks
+salary_checks <- dat %>%
+  filter(!is.na(GrossSalary)) %>%
+  summarise(
+    N = n(),
+    Min = min(GrossSalary),
+    Q1 = quantile(GrossSalary, 0.25),
+    Median = median(GrossSalary),
+    Mean = mean(GrossSalary),
+    Q3 = quantile(GrossSalary, 0.75),
+    Max = max(GrossSalary),
+    N_Below_30K = sum(GrossSalary < 30000),
+    N_Above_200K = sum(GrossSalary > 200000)
+  )
+
+salary_checks %>%
+  mutate(across(c(Min, Q1, Median, Mean, Q3, Max), ~dollar(.))) %>%
+  kable(caption = "Salary Data Quality Check") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+if (salary_checks$N_Below_30K > 0) {
+  cat("\n⚠️ NOTE:", salary_checks$N_Below_30K, "salaries are below $30,000. Please verify these are accurate.\n")
+}
+if (salary_checks$N_Above_200K > 0) {
+  cat("\n⚠️ NOTE:", salary_checks$N_Above_200K, "salaries are above $200,000. Please verify these are accurate.\n")
+}
+
+# Revenue checks
+revenue_checks <- dat %>%
+  filter(!is.na(ClinicRevenue), ClinicRevenue > 0) %>%
+  summarise(
+    N = n(),
+    Min = min(ClinicRevenue),
+    Q1 = quantile(ClinicRevenue, 0.25),
+    Median = median(ClinicRevenue),
+    Mean = mean(ClinicRevenue),
+    Q3 = quantile(ClinicRevenue, 0.75),
+    Max = max(ClinicRevenue),
+    N_Above_500K = sum(ClinicRevenue > 500000),
+    N_Above_1M = sum(ClinicRevenue > 1000000)
+  )
+
+revenue_checks %>%
+  mutate(across(c(Min, Q1, Median, Mean, Q3, Max), ~dollar(.))) %>%
+  kable(caption = "Revenue Data Quality Check") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+if (revenue_checks$N_Above_1M > 0) {
+  cat("\n⚠️ NOTE:", revenue_checks$N_Above_1M, "clinics report revenue above $1,000,000.\n")
+  cat("These are excluded from some visualizations. Consider if these are accurate or should be included.\n")
+}
+```
+
+### Tenure Track Classification Verification
+
+```{r tenure-classification-check}
+# Check tenure track classification
+tenure_check <- dat %>%
+  filter(!is.na(PositionType)) %>%
+  mutate(
+    TT = is_tt(PositionType),
+    NTT = is_ntt(PositionType),
+    Classification = case_when(
+      TT & NTT ~ "CONFLICT (Both TT and NTT)",
+      TT ~ "Tenure-Track/Tenured",
+      NTT ~ "Non-Tenure-Track",
+      TRUE ~ "Unclassified"
+    )
+  ) %>%
+  count(Classification, PositionType) %>%
+  arrange(Classification, desc(n))
+
+tenure_check %>%
+  kable(caption = "Tenure Track Classification Check") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+# Flag any conflicts
+conflicts <- tenure_check %>%
+  filter(str_detect(Classification, "CONFLICT"))
+
+if (nrow(conflicts) > 0) {
+  cat("\n🚨 ERROR: Some positions are classified as BOTH TT and NTT!\n")
+  cat("This should not happen. Check the classification logic.\n")
+}
+
+# Show unclassified
+unclassified <- tenure_check %>%
+  filter(Classification == "Unclassified")
+
+if (nrow(unclassified) > 0) {
+  cat("\n⚠️ NOTE:", sum(unclassified$n), "positions could not be classified as TT or NTT.\n")
+  cat("These will be excluded from TT vs. NTT comparisons.\n")
+  print(unclassified)
+}
+```
+
+### Sample Sizes for Salary Tables
+
+```{r salary-table-cell-sizes}
+# Check cell sizes for salary tables (explaining the blanks)
+cell_sizes <- dat_simple %>%
+  filter(!is.na(GrossSalary), !is.na(RankGrp), !is.na(FullPart)) %>%
+  count(RankGrp, FullPart) %>%
+  pivot_wider(names_from = FullPart, values_from = n, values_fill = 0) %>%
+  mutate(
+    `Full-time` = ifelse(`Full-time` < 3, paste0(`Full-time`, " ⚠️"), as.character(`Full-time`)),
+    `Part-time` = ifelse(`Part-time` < 3, paste0(`Part-time`, " ⚠️"), as.character(`Part-time`))
+  )
+
+cell_sizes %>%
+  kable(caption = "Cell Sizes for Salary Tables (⚠️ = suppressed due to n<3)") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+cat("\nCells marked with ⚠️ will show as '—' in salary tables due to privacy protection (n < 3).\n")
+```
+
+# Sample Demographics
+
+## Membership Status
+
+```{r membership}
+mem_status <- dat %>%
+  count(MemStatus) %>%
+  mutate(
+    Percentage = round(100 * n / sum(n), 1),
+    Label = paste0(n, " (", Percentage, "%)")
+  )
+
+mem_status %>%
+  kable(caption = "Sample Membership Status") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+## Professional Degree
+
+```{r degree}
+deg_summary <- dat %>%
+  count(ProfDeg) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+ggplot(deg_summary, aes(x = reorder(ProfDeg, n), y = Percentage, fill = ProfDeg)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.2, size = 4) +
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "Professional Degrees", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy),
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Degree Area
+
+```{r degree-area}
+deg_area <- dat %>%
+  count(DegArea) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+ggplot(deg_area, aes(x = reorder(DegArea, n), y = Percentage, fill = DegArea)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.2, size = 4) +
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "Graduate Degree Areas", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy),
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Role Duration
+
+```{r role-duration}
+role_stats <- dat %>%
+  filter(!is.na(RoleDuration), RoleDuration >= 0) %>%
+  summarise(
+    N = n(),
+    Mean = mean(RoleDuration, na.rm = TRUE),
+    SD = sd(RoleDuration, na.rm = TRUE),
+    Median = median(RoleDuration, na.rm = TRUE),
+    Mode = as.numeric(names(sort(table(RoleDuration), decreasing = TRUE)[1])),
+    Min = min(RoleDuration, na.rm = TRUE),
+    Max = max(RoleDuration, na.rm = TRUE)
+  )
+
+dat %>%
+  filter(!is.na(RoleDuration), RoleDuration >= 0) %>%
+  ggplot(aes(x = RoleDuration)) +
+  geom_histogram(binwidth = 2, fill = aptc_teal, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(RoleDuration)), color = aptc_coral, linetype = "dashed", size = 1) +
+  labs(
+    title = "How Long Have Directors Been in Their Role?",
+    subtitle = paste0("Mean = ", round(role_stats$Mean, 2), " years | Median = ", role_stats$Median, " years"),
+    x = "Years in Role", y = "Count"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy)
+  )
+
+role_stats %>%
+  kable(digits = 2) %>%
+  kable_styling()
+
+role_time_stats <- dat_simple %>%
+  filter(!is.na(RoleDuration)) %>%
+  summarise(
+    N = n(),
+    Mean = mean(RoleDuration),
+    Median = median(RoleDuration),
+    Q1 = quantile(RoleDuration, 0.25),
+    Q3 = quantile(RoleDuration, 0.75),
+    Pct_5yrs_or_less = mean(RoleDuration <= 5) * 100
+  )
+
+role_time_stats
+
+```
+
+# Position Characteristics
+
+## Academic Rank by Tenure Status
+
+```{r rank-tenure}
+rank_tenure <- dat %>%
+  filter(!is.na(Rank), !is.na(PositionType)) %>%
+  mutate(
+    Rank_clean = case_when(
+      str_detect(Rank, regex("Assistant", ignore_case = TRUE)) ~ "Assistant Professor",
+      str_detect(Rank, regex("Associate", ignore_case = TRUE)) ~ "Associate Professor",
+      str_detect(Rank, regex("Full", ignore_case = TRUE)) ~ "Full Professor",
+      TRUE ~ "Other"
+    ),
+    TenureStatus = case_when(
+      is_tt(PositionType) ~ "TT/Tenured",
+      is_ntt(PositionType) ~ "NTT",
+      TRUE ~ "Other"
+    )
+  ) %>%
+  count(Rank_clean, TenureStatus) %>%
+  pivot_wider(names_from = TenureStatus, values_from = n, values_fill = 0)
+
+rank_tenure %>%
+  kable(caption = "Academic Rank by Tenure Status") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+## Supervisor
+
+```{r supervisor}
+sup_summary <- dat %>%
+  count(Supervisor) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+ggplot(sup_summary, aes(x = reorder(Supervisor, n), y = Percentage, fill = Supervisor)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.2, size = 3.5) +
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "To Whom Do Clinic Directors Report?", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy),
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Contract Characteristics
+
+```{r contracts}
+# Contract months
+contract_months <- dat %>%
+  count(ContractMonths) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+# Contract length
+contract_length <- dat %>%
+  count(ContractLength) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+p1 <- ggplot(contract_months, aes(x = reorder(ContractMonths, n), y = Percentage, fill = ContractMonths)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.2, size = 3) +
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "Contract Type (Months)", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+
+p2 <- ggplot(contract_length, aes(x = reorder(ContractLength, n), y = Percentage, fill = ContractLength)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.2, size = 3) +
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "Contract Length", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+
+p1 + p2
+```
+
+# Salary Analysis
+
+## Overall Salary Distribution
+
+```{r salary-overall}
+salary_stats <- dat_simple %>%
+  filter(!is.na(GrossSalary)) %>%
+  summarise(
+    N = n(),
+    Mean = mean(GrossSalary),
+    SD = sd(GrossSalary),
+    Median = median(GrossSalary),
+    Q1 = quantile(GrossSalary, 0.25),
+    Q3 = quantile(GrossSalary, 0.75),
+    Min = min(GrossSalary),
+    Max = max(GrossSalary)
+  )
+
+dat_simple %>%
+  filter(!is.na(GrossSalary)) %>%
+  ggplot(aes(x = GrossSalary)) +
+  geom_histogram(binwidth = 10000, fill = aptc_teal, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(GrossSalary)), color = aptc_coral, linetype = "dashed", size = 1) +
+  scale_x_continuous(labels = dollar_format()) +
+  labs(
+    title = "Gross Salary Distribution",
+    subtitle = paste0("Median = ", dollar(salary_stats$Median), " | Mean = ", dollar(salary_stats$Mean)),
+    x = "Gross Salary", y = "Count"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy)
+  )
+
+salary_stats %>%
+  mutate(across(where(is.numeric), ~dollar(.))) %>%
+  kable() %>%
+  kable_styling()
+```
+
+## Salary by Rank and Full-Time/Part-Time
+
+```{r salary-tables}
+# Function to make salary table
+make_salary_table <- function(df) {
+  df %>%
+    filter(!is.na(GrossSalary), FullPart %in% c("Full-time", "Part-time")) %>%
+    group_by(RankGrp, FullPart) %>%
+    summarise(n = n(), avg = mean(GrossSalary), .groups = "drop") %>%
+    mutate(val = ifelse(n >= 3, dollar(round(avg, 0)), "—")) %>%
+    select(RankGrp, FullPart, val) %>%
+    complete(RankGrp, FullPart = c("Full-time", "Part-time")) %>%
+    pivot_wider(
+      names_from = FullPart,
+      values_from = val,
+      names_glue = "Avg. {FullPart} Salary"
+    ) %>%
+    group_by(RankGrp) %>%
+    summarise(
+      `Avg. Full-time Salary` = first(na.omit(`Avg. Full-time Salary`)),
+      `Avg. Part-time Salary` = first(na.omit(`Avg. Part-time Salary`)),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      `Avg. Full-Time Salary` = ifelse(is.na(`Avg. Full-time Salary`), "—", `Avg. Full-time Salary`),
+      `Avg. Part-Time Salary*` = ifelse(is.na(`Avg. Part-time Salary`), "—", `Avg. Part-time Salary`)
+    ) %>%
+    select(`Rank / Role` = RankGrp, `Avg. Full-Time Salary`, `Avg. Part-Time Salary*`) %>%
+    arrange(`Rank / Role`)
+}
+
+# Overall table
+overall_table <- make_salary_table(dat_simple)
+
+overall_table %>%
+  gt() %>%
+  tab_header(
+    title = md("**Average Faculty Salaries – All Positions**"),
+    subtitle = "Full-time and Part-time Averages (suppressed if n < 3)"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  ) %>%
+  tab_source_note(
+    source_note = md("*Cells suppressed when based on fewer than 3 respondents*")
+  )
+```
+
+```{r salary-by-gender}
+salary_gender_stats <- dat_simple %>%
+  filter(
+    !is.na(GrossSalary),
+    !is.na(Gender)
+  ) %>%
+  group_by(Gender) %>%
+  summarise(
+    N = n(),
+    Mean = mean(GrossSalary),
+    SD = sd(GrossSalary),
+    Median = median(GrossSalary),
+    Q1 = quantile(GrossSalary, 0.25),
+    Q3 = quantile(GrossSalary, 0.75),
+    Min = min(GrossSalary),
+    Max = max(GrossSalary),
+    .groups = "drop"
+  )
+
+salary_gender_stats %>%
+  mutate(across(where(is.numeric), ~ dollar(.))) %>%
+  kable() %>%
+  kable_styling()
+```
+
+### Tenure-Track/Tenured Positions
+
+```{r salary-tt}
+tt_table <- dat_simple %>% 
+  filter(is_tt(PositionType)) %>% 
+  make_salary_table()
+
+tt_table %>%
+  gt() %>%
+  tab_header(
+    title = md("**Average Faculty Salaries – Tenure/Tenure-Track (TT)**"),
+    subtitle = "Full-time and Part-time Averages (suppressed if n < 3)"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  ) %>%
+  tab_source_note(
+    source_note = md("*Cells suppressed when based on fewer than 3 respondents*")
+  )
+```
+
+### Non-Tenure-Track Positions
+
+```{r salary-ntt}
+ntt_table <- dat_simple %>% 
+  filter(is_ntt(PositionType)) %>% 
+  make_salary_table()
+
+ntt_table %>%
+  gt() %>%
+  tab_header(
+    title = md("**Average Faculty Salaries – Non-Tenure-Track (NTT)**"),
+    subtitle = "Full-time and Part-time Averages (suppressed if n < 3)"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  ) %>%
+  tab_source_note(
+    source_note = md("*Cells suppressed when based on fewer than 3 respondents*")
+  )
+```
+
+## Salary by Contract Type
+
+```{r salary-contract}
+dat_simple %>%
+  filter(!is.na(GrossSalary), !is.na(ContractLength)) %>%
+  ggplot(aes(x = reorder(ContractLength, GrossSalary, median), y = GrossSalary, fill = ContractLength)) +
+  geom_boxplot(alpha = 0.8, show.legend = FALSE) +
+  coord_flip() +
+  scale_y_continuous(labels = dollar_format()) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "Salary by Contract Length", x = "Contract Length", y = "Gross Salary") +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy)
+  )
+```
+
+**Note on Salary Tables:** The salary tables above show "—" (blank) cells when there are **fewer than 3 respondents** in that category. This is a privacy protection measure to prevent identification of individuals. For example, if only 1-2 part-time full professors responded, their average salary is suppressed.
+
+```{r salary by gender}
+salary_model_dat <- dat_simple %>%
+  filter(
+    !is.na(GrossSalary),
+    !is.na(Gender),
+    !is.na(RankGrp),
+    !is.na(PositionType),
+    !is.na(ContractLength)
+  ) %>%
+  mutate(
+    Gender_model = case_when(
+      Gender %in% c("Man", "Woman") ~ Gender,
+      TRUE ~ NA_character_
+    ),
+    Gender_model = factor(Gender_model),
+    RankGrp = factor(RankGrp),
+    PositionType = factor(PositionType),
+    ContractLength = factor(ContractLength)
+  ) %>%
+  filter(!is.na(Gender_model))
+
+salary_model <- lm(
+  GrossSalary ~ Gender_model + RankGrp + PositionType + ContractLength,
+  data = salary_model_dat
+)
+
+summary(salary_model)
+
+m_gender_only <- lm(
+  GrossSalary ~ Gender_model,
+  data = salary_model_dat
+)
+
+m_structural <- lm(
+  GrossSalary ~ RankGrp + PositionType + ContractLength,
+  data = salary_model_dat
+)
+
+m_full <- salary_model
+
+anova(m_gender_only, m_structural, m_full)
+
+
+
+m_tt_ntt_rank <- lm(
+  GrossSalary ~ PositionType + RankGrp + FullPart,
+  data = dat_simple %>%
+    filter(
+      !is.na(GrossSalary),
+      PositionType %in% c(
+        "Tenured or Tenure-track faculty",
+        "Non-tenure-track faculty (incl. Adjunct and teaching faculty)"
+      ),
+      RankGrp %in% c(
+        "Assistant Professor",
+        "Associate Professor",
+        "Full Professor"
+      ),
+      FullPart %in% c("Full-time", "Part-time")
+    ) %>%
+    mutate(
+      PositionType = relevel(
+        factor(PositionType),
+        ref = "Tenured or Tenure-track faculty"
+      ),
+      RankGrp = factor(
+        RankGrp,
+        levels = c(
+          "Assistant Professor",
+          "Associate Professor",
+          "Full Professor"
+        )
+      ),
+      FullPart = factor(FullPart)
+    )
+)
+summary(m_tt_ntt_rank)
+
+m_no_position <- lm(
+  GrossSalary ~ RankGrp + FullPart,
+  data = model.frame(m_tt_ntt_rank)
+)
+
+anova(m_no_position, m_tt_ntt_rank)
+
+```
+
+In an adjusted model accounting for rank, tenure status, and contract length, the estimated salary difference between men and women was $10,832 (SE = $9,000), which was not statistically significant (p = .23).
+
+In a linear model restricted to faculty within the professorial rank structure and adjusting for full-time versus part-time status, tenure-track status was not independently associated with salary. Non-tenure-track faculty earned approximately $13,000 less than tenure-track faculty on average, but this difference was not statistically significant (p = .17). Academic rank was the dominant predictor of salary, with associate and full professors earning substantially more than assistant professors.
+
+## Salary by FTE
+
+```{r salary-fte-correlation}
+salary_fte_salary_dat <- dat_simple %>%
+  filter(!is.na(GrossSalary), !is.na(FTESalary))
+
+cor.test(salary_fte_salary_dat$GrossSalary,
+         salary_fte_salary_dat$FTESalary,
+         method = "pearson")
+
+```
+
+## Professional Development Funding
+
+```{r pd-funding}
+dat_simple <- dat_simple %>%
+  mutate(
+    # PD access (binary)
+    PD_access = case_when(
+      grepl("^Yes", PDFunds) ~ 1L,
+      PDFunds == "No" ~ 0L,
+      TRUE ~ NA_integer_
+    ),
+
+    # PD amount (numeric, from text field)
+    PD_amount = suppressWarnings(as.numeric(PDFunds_2_TEXT)),
+    PD_amount = ifelse(PD_amount == -99, NA, PD_amount)
+  )
+
+pd_summary <- dat %>%
+  count(PDFunds) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+pd_summary %>%
+  kable(caption = "Professional Development Funding") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+dat_simple <- dat_simple %>%
+  mutate(
+    PDFunds_num = suppressWarnings(as.numeric(PDFunds)),
+    PDFunds_binary = ifelse(!is.na(PDFunds_num) & PDFunds_num > 0, 1L, 0L)
+  )
+
+pd_amount_dat <- dat_simple %>%
+  filter(PD_access == 1, !is.na(PD_amount))
+
+pd_amount_stats <- pd_amount_dat %>%
+  summarise(
+    N = n(),
+    Mean = mean(PD_amount),
+    SD = sd(PD_amount),
+    Median = median(PD_amount),
+    Q1 = quantile(PD_amount, 0.25),
+    Q3 = quantile(PD_amount, 0.75),
+    Min = min(PD_amount),
+    Max = max(PD_amount)
+  )
+
+pd_amount_stats %>%
+  mutate(across(where(is.numeric), scales::dollar)) %>%
+  kable(caption = "Professional Development Funding Amounts (Among Recipients)") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+pd_amount_dat %>%
+  filter(
+    PositionType %in% c(
+      "Tenured or Tenure-track faculty",
+      "Non-tenure-track faculty (incl. Adjunct and teaching faculty)"
+    )
+  ) %>%
+  ggplot(aes(x = PositionType, y = PD_amount, fill = PositionType)) +
+  geom_boxplot(alpha = 0.8, show.legend = FALSE) +
+  scale_y_continuous(labels = scales::dollar_format()) +
+  scale_fill_manual(values = aptc_binary) +
+  labs(
+    title = "Professional Development Funding Amounts by Appointment Type",
+    x = NULL,
+    y = "PD Funding Amount (USD)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+m_pd_amount <- lm(
+  log(PD_amount) ~ PositionType + RankGrp + FullPart,
+  data = pd_amount_dat %>%
+    filter(
+      PositionType %in% c(
+        "Tenured or Tenure-track faculty",
+        "Non-tenure-track faculty (incl. Adjunct and teaching faculty)"
+      ),
+      !is.na(RankGrp),
+      FullPart %in% c("Full-time", "Part-time")
+    ) %>%
+    mutate(
+      PositionType = relevel(droplevels(factor(PositionType)),
+                             ref = "Tenured or Tenure-track faculty"),
+      RankGrp = droplevels(factor(RankGrp)),
+      FullPart = droplevels(factor(FullPart))
+    )
+)
+
+summary(m_pd_amount)
+ggplot(pd_amount_dat, aes(x = PD_amount)) +
+  geom_histogram(
+    binwidth = 500,
+    fill = aptc_teal,
+    color = "white",
+    alpha = 0.9
+  ) +
+  geom_vline(
+    xintercept = median(pd_amount_dat$PD_amount, na.rm = TRUE),
+    color = aptc_coral,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+  scale_x_continuous(
+    labels = scales::dollar_format()
+  ) +
+  labs(
+    title = "Distribution of Professional Development Funding Amounts",
+    x = "Professional Development Funding (USD)",
+    y = "Number of Respondents"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy)
+  )
+
+
+```
+Among respondents who reported receiving professional development funds, dollar amounts did not differ significantly by tenure-track status, academic rank, or full-time appointment. PD funding amounts were relatively consistent across roles, with a typical allocation of approximately $1,500–$2,000 per year.
+
+# Responsibilities and Workload
+
+## Hours Worked in Clinic
+
+```{r hours-clinic}
+hours_stats <- dat %>%
+  filter(!is.na(HoursWorkClinic)) %>%
+  summarise(
+    N = n(),
+    Mean = mean(HoursWorkClinic),
+    SD = sd(HoursWorkClinic),
+    Median = median(HoursWorkClinic),
+    Min = min(HoursWorkClinic),
+    Max = max(HoursWorkClinic)
+  )
+
+dat %>%
+  filter(!is.na(HoursWorkClinic)) %>%
+  ggplot(aes(x = HoursWorkClinic)) +
+  geom_histogram(binwidth = 5, fill = aptc_teal, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(HoursWorkClinic)), color = aptc_coral, linetype = "dashed", size = 1) +
+  labs(
+    title = "Hours Per Week Spent on Clinic Activities",
+    subtitle = paste0("Median = ", hours_stats$Median, " hours | Mean = ", round(hours_stats$Mean, 1), " hours"),
+    x = "Hours per Week", y = "Count"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy)
+  )
+```
+
+## Teaching
+
+```{r teaching}
+teaching_summary <- dat %>%
+  count(TeachingBinary) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+courses_summary <- dat %>%
+  filter(TeachingBinary == "Yes", !is.na(CoursesTaught)) %>%
+  summarise(
+    N = n(),
+    Mean = mean(CoursesTaught),
+    Median = median(CoursesTaught),
+    Min = min(CoursesTaught),
+    Max = max(CoursesTaught)
+  )
+
+p1 <- ggplot(teaching_summary, aes(x = TeachingBinary, y = Percentage, fill = TeachingBinary)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, "\n(", Percentage, "%)")), vjust = -0.5, size = 4) +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = c("Yes" = aptc_teal, "No" = aptc_coral)) +
+  labs(title = "Do Directors Teach?", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+
+p2 <- dat %>%
+  filter(TeachingBinary == "Yes", !is.na(CoursesTaught)) %>%
+  ggplot(aes(x = CoursesTaught)) +
+  geom_histogram(binwidth = 1, fill = aptc_teal, color = "white", alpha = 0.9) +
+  labs(
+    title = "Courses Taught per Year",
+    subtitle = paste0("Among those who teach (n=", courses_summary$N, ")"),
+    x = "Number of Courses", y = "Count"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+
+p1 + p2
+```
+
+# Clinic Characteristics
+
+## Training Model and Clinic Age
+
+```{r clinic-model}
+model_summary <- dat %>%
+  count(ClinicTrainingModel) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+
+age_stats <- dat %>%
+  filter(!is.na(ClinicAge), ClinicAge >= 0) %>%
+  summarise(
+    N = n(),
+    Mean = mean(ClinicAge),
+    SD = sd(ClinicAge),
+    Median = median(ClinicAge),
+    Min = min(ClinicAge),
+    Max = max(ClinicAge)
+  )
+
+p1 <- ggplot(model_summary, aes(x = reorder(ClinicTrainingModel, n), y = Percentage, fill = ClinicTrainingModel)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, "\n(", Percentage, "%)")), hjust = -0.2, size = 3) +
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "Training Model", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+
+p2 <- dat %>%
+  filter(!is.na(ClinicAge), ClinicAge >= 0) %>%
+  ggplot(aes(x = ClinicAge)) +
+  geom_histogram(binwidth = 10, fill = aptc_coral, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(ClinicAge)), color = aptc_navy, linetype = "dashed", size = 1) +
+  labs(
+    title = "Clinic Age (Years)",
+    subtitle = paste0("Mean = ", round(age_stats$Mean, 1), " | Median = ", age_stats$Median),
+    x = "Years", y = "Count"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+
+p1 + p2
+```
+
+## Trainees and Clients
+
+```{r trainees-clients}
+trainee_stats <- dat %>%
+  filter(!is.na(ClinicTotalTrainees), ClinicTotalTrainees > 0) %>%
+  summarise(
+    N = n(),
+    Mean = mean(ClinicTotalTrainees),
+    SD = sd(ClinicTotalTrainees),
+    Median = median(ClinicTotalTrainees),
+    Min = min(ClinicTotalTrainees),
+    Max = max(ClinicTotalTrainees)
+  )
+
+client_stats <- dat %>%
+  filter(!is.na(ClinicClientsCount), ClinicClientsCount > 0) %>%
+  summarise(
+    N = n(),
+    Mean = mean(ClinicClientsCount),
+    SD = sd(ClinicClientsCount),
+    Median = median(ClinicClientsCount),
+    Min = min(ClinicClientsCount),
+    Max = max(ClinicClientsCount)
+  )
+
+p1 <- dat %>%
+  filter(!is.na(ClinicTotalTrainees), ClinicTotalTrainees > 0) %>%
+  ggplot(aes(x = ClinicTotalTrainees)) +
+  geom_histogram(binwidth = 5, fill = aptc_teal, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(ClinicTotalTrainees)), color = aptc_coral, linetype = "dashed", size = 1) +
+  labs(
+    title = "Trainees per Year",
+    subtitle = paste0("Mean = ", round(trainee_stats$Mean, 1), " | Median = ", trainee_stats$Median),
+    x = "Number of Trainees", y = "Count"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+
+p2 <- dat %>%
+  filter(!is.na(ClinicClientsCount), ClinicClientsCount > 0) %>%
+  ggplot(aes(x = ClinicClientsCount)) +
+  geom_histogram(binwidth = 25, fill = aptc_coral, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(ClinicClientsCount)), color = aptc_navy, linetype = "dashed", size = 1) +
+  labs(
+    title = "Clients per Year",
+    subtitle = paste0("Mean = ", round(client_stats$Mean, 1), " | Median = ", client_stats$Median),
+    x = "Number of Clients", y = "Count"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+
+p1 + p2
+```
+
+## Clinic Services
+
+```{r services}
+# Therapy services
+therapy_binary <- dat %>%
+  count(ClinicTherapyBinary) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+# Assessment services
+assmnt_binary <- dat %>%
+  count(ClinicAssmntBinary) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+therapy_binary %>%
+  kable(caption = "Clinics Offering Therapy Services") %>%
+  kable_styling()
+
+assmnt_binary %>%
+  kable(caption = "Clinics Offering Assessment Services") %>%
+  kable_styling()
+```
+
+# Financial Information
+
+## Sliding Scale
+
+```{r sliding-scale}
+sliding_scale <- dat %>%
+  count(ClinicSlidingScale) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(sliding_scale, aes(x = ClinicSlidingScale, y = Percentage, fill = ClinicSlidingScale)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), vjust = -0.5, size = 5) +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = c("Yes" = aptc_teal, "No" = aptc_coral)) +
+  labs(title = "Do Clinics Offer a Sliding Scale?", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+## Clinic Revenue
+
+```{r revenue}
+revenue_stats <- dat %>%
+  filter(!is.na(ClinicRevenue), ClinicRevenue > 0) %>%
+  summarise(
+    N = n(),
+    Mean = mean(ClinicRevenue),
+    SD = sd(ClinicRevenue),
+    Median = median(ClinicRevenue),
+    Q1 = quantile(ClinicRevenue, 0.25),
+    Q3 = quantile(ClinicRevenue, 0.75),
+    Min = min(ClinicRevenue),
+    Max = max(ClinicRevenue)
+  )
+
+dat %>%
+  filter(!is.na(ClinicRevenue), ClinicRevenue > 0, ClinicRevenue < 500000) %>%
+  ggplot(aes(x = ClinicRevenue)) +
+  geom_histogram(binwidth = 25000, fill = aptc_teal, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(ClinicRevenue, na.rm = TRUE)), color = aptc_coral, linetype = "dashed", size = 1) +
+  scale_x_continuous(labels = dollar_format()) +
+  labs(
+    title = "Annual Clinic Revenue Distribution",
+    subtitle = paste0("Median = ", dollar(revenue_stats$Median), " | Mean = ", dollar(revenue_stats$Mean)),
+    x = "Annual Revenue", y = "Count"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy)
+  )
+```
+
+## Revenue by Client Count
+
+```{r revenue-clients}
+dat_revenue <- dat %>%
+  filter(!is.na(ClinicRevenue), !is.na(ClinicClientsCount),
+         ClinicRevenue > 0, ClinicClientsCount > 0,
+         ClinicRevenue < 1000000) %>%
+  mutate(
+    ClinicSize = case_when(
+      ClinicClientsCount < 93 ~ "Small (<93)",
+      ClinicClientsCount >= 93 & ClinicClientsCount <= 130 ~ "Medium (93-130)",
+      ClinicClientsCount > 130 ~ "Large (>130)"
+    ),
+    ClinicSize = factor(ClinicSize, levels = c("Small (<93)", "Medium (93-130)", "Large (>130)"))
+  )
+
+# Correlation
+cor_result <- cor.test(dat_revenue$ClinicClientsCount, dat_revenue$ClinicRevenue)
+
+ggplot(dat_revenue, aes(x = ClinicClientsCount, y = ClinicRevenue, color = ClinicSize)) +
+  geom_point(size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = aptc_navy, linetype = "dashed") +
+  scale_y_continuous(labels = dollar_format()) +
+  scale_color_manual(values = c("Small (<93)" = aptc_coral, 
+                                 "Medium (93-130)" = aptc_teal, 
+                                 "Large (>130)" = aptc_navy)) +
+  labs(
+    title = "Clinic Revenue by Client Number",
+    subtitle = paste0("Correlation: r = ", round(cor_result$estimate, 2)),
+    x = "Number of Clients per Year",
+    y = "Annual Clinic Revenue",
+    color = "Clinic Size"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy),
+    legend.position = "top"
+  )
+```
+
+# Staff and Operations
+
+## Number of Rooms
+
+```{r rooms}
+room_stats <- dat %>%
+  filter(!is.na(NumRooms), NumRooms > 0) %>%
+  summarise(
+    N = n(),
+    Mean = mean(NumRooms),
+    SD = sd(NumRooms),
+    Median = median(NumRooms),
+    Min = min(NumRooms),
+    Max = max(NumRooms)
+  )
+
+dat %>%
+  filter(!is.na(NumRooms), NumRooms > 0) %>%
+  ggplot(aes(x = NumRooms)) +
+  geom_histogram(binwidth = 2, fill = aptc_teal, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(NumRooms)), color = aptc_coral, linetype = "dashed", size = 1) +
+  labs(
+    title = "Number of Clinic Rooms",
+    subtitle = paste0("Mean = ", round(room_stats$Mean, 1), " | Median = ", room_stats$Median),
+    x = "Number of Rooms", y = "Count"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy)
+  )
+```
+
+## Supervisors and Caseloads
+
+```{r supervisors}
+max_trainee_summary <- dat %>%
+  filter(!is.na(MaxTraineeCount), MaxTraineeCount > 0) %>%
+  summarise(
+    N = n(),
+    Mean = mean(MaxTraineeCount),
+    SD = sd(MaxTraineeCount),
+    Median = median(MaxTraineeCount),
+    Min = min(MaxTraineeCount),
+    Max = max(MaxTraineeCount)
+  )
+
+dat %>%
+  filter(!is.na(MaxTraineeCount), MaxTraineeCount > 0) %>%
+  ggplot(aes(x = MaxTraineeCount)) +
+  geom_histogram(binwidth = 2, fill = aptc_coral, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = median(MaxTraineeCount)), color = aptc_navy, linetype = "dashed", size = 1) +
+  labs(
+    title = "Maximum Trainees per Supervisor",
+    subtitle = paste0("Mean = ", round(max_trainee_summary$Mean, 1), " | Median = ", max_trainee_summary$Median),
+    x = "Max Trainees", y = "Count"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy)
+  )
+```
+
+# Technology
+
+## EMR Usage
+
+```{r emr}
+emr_summary <- dat %>%
+  count(EMRbinary) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(emr_summary, aes(x = EMRbinary, y = Percentage, fill = EMRbinary)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), vjust = -0.5, size = 5) +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = c("Yes" = aptc_teal, "No" = aptc_coral)) +
+  labs(title = "Electronic Medical Record (EMR) Usage", x = "Uses EMR?", y = "Percentage (%)") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+## Telehealth
+
+```{r telehealth}
+telehealth_summary <- dat %>%
+  count(Telehealth) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(telehealth_summary, aes(x = Telehealth, y = Percentage, fill = Telehealth)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), vjust = -0.5, size = 5) +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = c("Yes" = aptc_teal, "No" = aptc_coral)) +
+  labs(title = "Telehealth Service Provision", x = "Offers Telehealth?", y = "Percentage (%)") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+```
+
+## Artificial Intelligence
+
+```{r ai}
+ai_clindir <- dat %>%
+  count(AIUseClinDir) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+ai_students <- dat %>%
+  count(AIUseStudentsAllowed) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+p1 <- ggplot(ai_clindir, aes(x = AIUseClinDir, y = Percentage, fill = AIUseClinDir)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(Percentage, "%")), vjust = -0.5, size = 4) +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "AI Use by Clinic Directors", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold", color = aptc_navy))
+
+p2 <- ggplot(ai_students, aes(x = AIUseStudentsAllowed, y = Percentage, fill = AIUseStudentsAllowed)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(Percentage, "%")), vjust = -0.5, size = 4) +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "AI Use Allowed for Students", x = NULL, y = "Percentage (%)") +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy),
+    axis.text.x = element_text(angle = 20, hjust = 1)
+  )
+
+p1 + p2
+```
+
+# Research Activities
+
+```{r research}
+research_summary <- dat %>%
+  count(ResearchActive) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1))
+
+ggplot(research_summary, aes(x = ResearchActive, y = Percentage, fill = ResearchActive)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = paste0(n, " (", Percentage, "%)")), vjust = -0.5, size = 4) +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20)) +
+  scale_fill_manual(values = aptc_palette) +
+  labs(title = "Research Activity in Training Clinics", x = "Research Status", y = "Percentage (%)") +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy),
+    axis.text.x = element_text(angle = 15, hjust = 1)
+  )
+```
+
+# Burnout and Job Satisfaction
+
+## Burnout Levels
+
+```{r burnout}
+burnout_stats <- dat %>%
+  filter(!is.na(Burnout_1)) %>%
+  summarise(
+    N = n(),
+    Mean = mean(Burnout_1),
+    SD = sd(Burnout_1),
+    Median = median(Burnout_1),
+    Min = min(Burnout_1),
+    Max = max(Burnout_1)
+  )
+
+dat %>%
+  filter(!is.na(Burnout_1)) %>%
+  ggplot(aes(x = Burnout_1)) +
+  geom_histogram(binwidth = 1, fill = aptc_coral, color = "white", alpha = 0.9) +
+  geom_vline(aes(xintercept = mean(Burnout_1)), color = aptc_navy, linetype = "dashed", size = 1) +
+  scale_x_continuous(breaks = 0:6) +
+  labs(
+    title = "Burnout Levels Among Clinic Directors",
+    subtitle = paste0("Mean = ", round(burnout_stats$Mean, 2), " (SD = ", round(burnout_stats$SD, 2), ") | Range: 0-6"),
+    x = "Burnout Score (0 = No burnout, 6 = Severe burnout)",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", color = aptc_navy)
+  )
+```
+
+
+# Session Information
+
+```{r session}
+sessionInfo()
+```

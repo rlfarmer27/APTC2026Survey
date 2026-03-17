@@ -1,0 +1,21 @@
+"0","#| label: methods-text"
+"0","#| echo: false"
+"0","#| results: asis"
+"0",""
+"0","cat(sprintf("""
+"0","> ### Power Analysis"
+"0",">"
+"0","> A simulation-based power analysis was conducted to determine the required sample size. For extraneous cognitive load and acceptability, we used cumulative link mixed models (CLMM) and assumed a moderate effect size (d = %.1f) with Benjamini-Hochberg correction. For comprehension, we framed the hypothesis as non-inferiority, testing whether the condensed format produces accuracy not more than %.0f percentage points below the traditional format (baseline = %.0f%%), using a one-sided α = %.2f."
+"0",">"
+"0","> We simulated %s datasets at each sample size from N = %d to N = %d, sampling from a population of %s simulated participants. Results indicated that **N = %s** provides ≥80%% power for all primary outcomes: detecting moderate superiority effects on cognitive load and acceptability, and demonstrating non-inferiority on comprehension assuming the formats are equivalent."
+"0",""","
+"0","effect_size_d, ni_margin * 100, baseline_accuracy * 100, ni_alpha,"
+"0","format(n_sims, big.mark = "",""), min(sample_sizes), max(sample_sizes),"
+"0","format(n_population, big.mark = "",""), rec_n))"
+"1","
+> ### Power Analysis
+>
+> A simulation-based power analysis was conducted to determine the required sample size. For extraneous cognitive load and acceptability, we used cumulative link mixed models (CLMM) and assumed a moderate effect size (d = 0.5) with Benjamini-Hochberg correction. For comprehension, we framed the hypothesis as non-inferiority, testing whether the condensed format produces accuracy not more than 7 percentage points below the traditional format (baseline = 85%), using a one-sided α = 0.05.
+>
+> We simulated 1,000 datasets at each sample size from N = 50 to N = 300, sampling from a population of 10,000 simulated participants. Results indicated that **N = 125** provides ≥80% power for all primary outcomes: detecting moderate superiority effects on cognitive load and acceptability, and demonstrating non-inferiority on comprehension assuming the formats are equivalent.
+"

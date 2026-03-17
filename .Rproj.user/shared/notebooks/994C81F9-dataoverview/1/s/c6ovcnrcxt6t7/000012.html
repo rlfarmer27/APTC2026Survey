@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<style>body{background-color:white;}</style>
+<script src="lib/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="lib/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="lib/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="lib/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="lib/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="lib/kePrint-0.0.1/kePrint.js"></script>
+<link href="lib/lightable-0.0.1/lightable.css" rel="stylesheet" />
+
+</head>
+<body>
+<table class="table table-striped table-hover" style="color: black; margin-left: auto; margin-right: auto;">
+<caption>Missing Data Summary (Variables with Any Missing Data)</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;"> Variable </th>
+   <th style="text-align:right;"> Missing_Count </th>
+   <th style="text-align:right;"> Total </th>
+   <th style="text-align:right;"> Percent_Missing </th>
+   <th style="text-align:right;"> Percent_Complete </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> CoursesTaught </td>
+   <td style="text-align:right;"> 25 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 29.8 </td>
+   <td style="text-align:right;"> 70.2 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> MaxTraineeCount </td>
+   <td style="text-align:right;"> 17 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 20.2 </td>
+   <td style="text-align:right;"> 79.8 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Rank </td>
+   <td style="text-align:right;"> 14 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 16.7 </td>
+   <td style="text-align:right;"> 83.3 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ClinicRevenue </td>
+   <td style="text-align:right;"> 11 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 13.1 </td>
+   <td style="text-align:right;"> 86.9 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ClinicSlidingScale </td>
+   <td style="text-align:right;"> 11 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 13.1 </td>
+   <td style="text-align:right;"> 86.9 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ClinicAge </td>
+   <td style="text-align:right;"> 10 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 11.9 </td>
+   <td style="text-align:right;"> 88.1 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> RoleDuration </td>
+   <td style="text-align:right;"> 9 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 10.7 </td>
+   <td style="text-align:right;"> 89.3 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ClinicTotalTrainees </td>
+   <td style="text-align:right;"> 8 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 9.5 </td>
+   <td style="text-align:right;"> 90.5 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ClinicClientsCount </td>
+   <td style="text-align:right;"> 8 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 9.5 </td>
+   <td style="text-align:right;"> 90.5 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ClinicDuration </td>
+   <td style="text-align:right;"> 7 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 8.3 </td>
+   <td style="text-align:right;"> 91.7 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ClinicTrainingModel </td>
+   <td style="text-align:right;"> 7 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 8.3 </td>
+   <td style="text-align:right;"> 91.7 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> EMRbinary </td>
+   <td style="text-align:right;"> 7 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 8.3 </td>
+   <td style="text-align:right;"> 91.7 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Telehealth </td>
+   <td style="text-align:right;"> 7 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 8.3 </td>
+   <td style="text-align:right;"> 91.7 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> ResearchActive </td>
+   <td style="text-align:right;"> 7 </td>
+   <td style="text-align:right;"> 84 </td>
+   <td style="text-align:right;"> 8.3 </td>
+   <td style="text-align:right;"> 91.7 </td>
+  </tr>
+</tbody>
+</table> <script type="text/x-mathjax-config">MathJax.Hub.Config({tex2jax: {inlineMath: [["$","$"]]}})</script><script async src="https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</body>
+</html>

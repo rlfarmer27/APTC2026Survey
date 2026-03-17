@@ -1,0 +1,7 @@
+"0","dat_simple <- dat_simple %>%"
+"0","  mutate(PD_access = case_when(grepl(""^Yes"", PDFunds) ~ 1L, PDFunds == ""No"" ~ 0L, TRUE ~ NA_integer_),"
+"0","         PD_amount = suppressWarnings(as.numeric(PDFunds_2_TEXT)),"
+"0","         PD_amount = ifelse(PD_amount == -99, NA, PD_amount))"
+"0",""
+"0","pd_summary <- dat %>% count(PDFunds) %>% mutate(Percentage = round(100 * n / sum(n), 1)) %>% arrange(desc(n))"
+"0","pd_summary %>% kable(caption = ""Professional Development Funding"") %>% kable_styling(bootstrap_options = c(""striped"", ""hover""))"

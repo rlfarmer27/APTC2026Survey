@@ -1,0 +1,12 @@
+"0",""
+"0","unclassified <- tenure_check %>% filter(Classification == ""Unclassified"")"
+"0","if (nrow(unclassified) > 0) {"
+"0","  cat(""\n⚠️ NOTE:"", sum(unclassified$n), ""positions could not be classified as TT or NTT.\n"")"
+"0","}"
+"1","
+⚠️ NOTE:"
+"1"," "
+"1","22"
+"1"," "
+"1","positions could not be classified as TT or NTT.
+"

@@ -1,0 +1,460 @@
+---
+title: "2025 v 2026"
+author: "Jacqueline Hersh, Ph.D. & Ryan L. Farmer, Ph.D."
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-float: true
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    theme: cosmo
+    df-print: paged
+    fig-width: 10
+    fig-height: 6
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center"
+)
+
+# -----------------------------
+# APTC Color System
+# -----------------------------
+
+# Core brand colors
+aptc_navy  <- "#252b3b"
+aptc_coral <- "#ff6544"
+aptc_teal  <- "#31a8c0"
+aptc_white <- "#ffffff"
+
+# Extended categorical palette (9 colors, stable + on-brand)
+aptc_palette <- c(
+  aptc_coral,   # coral
+  "#ff8f77",    # light coral
+  "#e24f33",    # dark coral
+
+  aptc_teal,    # teal
+  "#5bc0d4",    # light teal
+  "#1f7f92",    # dark teal
+
+  aptc_navy,    # navy
+  "#454d5f",    # light navy
+  "#161b29"     # dark navy
+)
+
+# Binary palette (Yes / No, True / False, etc.)
+aptc_binary <- c(
+  aptc_teal,
+  aptc_coral
+)
+
+# Sequential palette (low -> high)
+aptc_sequential <- colorRampPalette(
+  c(aptc_white, aptc_teal, aptc_navy)
+)(100)
+
+```
+
+# Setup and Data Loading
+
+## Load Libraries
+
+```{r libraries}
+library(readxl)
+library(tidyverse)
+library(freqtables)
+library(skimr)
+library(scales)
+library(gt)
+library(knitr)
+library(kableExtra)
+library(patchwork)
+library(viridis)
+```
+
+## 2025 Load Data
+
+```{r}
+library(readxl)
+dat25 <- read_excel("2025dat.xlsx", na = "-99", 
+     skip = 1)
+
+
+dat25 <- dat25 %>%
+  mutate(
+    across(where(is.character), str_trim)
+  )
+
+dat25_quant <- dat25 %>%
+  transmute(
+    GrossSalary = as.numeric(`What is your Total Gross Salary (this excludes any stipends or grant-related work):`),
+    FTESalary = as.numeric(`What percentage of FTE (0-100%) is this salary based on? FTE 100% refers to a full-time employee or the equivalent of a full-time employee.`),
+    ClinicRevenue = as.numeric(`What is the average total annual revenue for your clinic?`),
+    ClinicClientsCount = as.numeric(`How many clients/patients does your clinic service in an average year?`),
+    ClinicTotalTrainees = as.numeric(`How many total trainees (doing therapy and/or assessment) does your clinic have in an average year?`),
+    HoursWorkClinic = as.numeric(`In a typical week, how many hours per week do you work in your role in the clinic?`),
+    ClinicAge = as.numeric(`How many years has your clinic been in existence?`),
+    PD_amount = as.numeric(`Do you receive any annual professional development funds from your institution (e.g., conference travel, funds for licensing fees or CEs)? - Yes (if yes, please specify amount in dollars): - Text`)
+  )
+
+```
+
+## 2026 Load Data
+
+```{r load-data}
+
+library(readxl)
+dat <- read_excel("dat.xlsx")
+dat <- dat[-1, ]
+library(dplyr)
+library(stringr)
+
+dat26 <- dat %>%
+  mutate(
+    across(where(is.numeric), ~ na_if(., -99)),
+    across(where(is.character), ~ na_if(., "-99")),
+    across(where(is.character), str_trim)
+  )
+
+
+
+# -----------------------------
+# GLOBAL DATA CLEANING (FIXED)
+# -----------------------------
+
+dat26 <- dat26 %>%
+  # 1. Replace -99 with NA in numeric columns
+  mutate(
+    across(
+      where(is.numeric),
+      ~ na_if(., -99)
+    )
+  ) %>%
+
+  # 2. Replace "-99" with NA in character columns
+  mutate(
+    across(
+      where(is.character),
+      ~ na_if(., "-99")
+    )
+  ) %>%
+
+  # 3. Remove question text accidentally stored as values
+  mutate(
+    across(
+      where(is.character),
+      ~ if_else(
+        str_detect(
+          .,
+          regex(
+            "(\\?$)|(^what is )|(^last )|(^during )|(^in the last )",
+            ignore_case = TRUE
+          )
+        ),
+        NA_character_,
+        .
+      )
+    )
+  ) %>%
+
+  # 4. Trim whitespace
+  mutate(
+    across(where(is.character), str_trim)
+  ) %>%
+
+  # 5. Normalize binary variables
+  mutate(
+    across(
+      matches("Binary$"),
+      ~ case_when(
+        str_detect(., regex("^yes$", ignore_case = TRUE)) ~ "Yes",
+        str_detect(., regex("^no$",  ignore_case = TRUE)) ~ "No",
+        TRUE ~ NA_character_
+      )
+    )
+  ) %>%
+
+  # 6. Preserve your explicit numeric coercions
+  mutate(
+    Progress = as.numeric(Progress),
+    Duration = as.numeric(`Duration (in seconds)`),
+    GrossSalary = as.numeric(GrossSalary),
+    FTESalary = as.numeric(FTESalary),
+    RoleDuration = as.numeric(RoleDuration),
+    ClinicDuration = as.numeric(ClinicDuration),
+    ClinicAge = as.numeric(ClinicAge),
+    HoursWorkClinic = as.numeric(HoursWorkClinic),
+    CoursesTaught = as.numeric(CoursesTaught),
+    CourseCreditHours = as.numeric(CourseCreditHours),
+    ClinicTotalTrainees = as.numeric(ClinicTotalTrainees),
+    ClinicClientsCount = as.numeric(ClinicClientsCount),
+    NumRooms = as.numeric(NumRooms),
+    ClinSqFt = as.numeric(ClinSqFt),
+    SupTraineeCount = as.numeric(SupTraineeCount),
+    MaxTraineeCount = as.numeric(MaxTraineeCount),
+    HoursSupTherapy = as.numeric(HoursSupTherapy),
+    HoursSupAssmnt = as.numeric(HoursSupAssmnt),
+    HoursSupSup = as.numeric(HoursSupSup),
+    HoursWatching = as.numeric(HoursWatching),
+    HoursReviewingDoc = as.numeric(HoursReviewingDoc),
+    MaxTraineesTherapy = as.numeric(MaxTraineesTherapy),
+    MaxTraineesAssmnt = as.numeric(MaxTraineesAssmnt),
+    TxLength = as.numeric(TxLength),
+    MaxTxCasesAllow = as.numeric(MaxTxCasesAllow),
+    MaxAxCasesAllow = as.numeric(MaxAxCasesAllow),
+    ClinicRevenue = as.numeric(ClinicRevenue),
+    ClinicTxRevenue = as.numeric(ClinicTxRevenue),
+    ClinicAxRevenue = as.numeric(ClinicAxRevenue),
+    Burnout_1 = as.numeric(Burnout_1),
+    Burnout_2 = as.numeric(Burnout_2),
+    Burnout_3 = as.numeric(Burnout_3),
+    Burnout_4 = as.numeric(Burnout_4),
+    Burnout_5 = as.numeric(Burnout_5)
+  )
+
+dat26_quant <- dat26 %>%
+  mutate(
+    PD_amount = as.numeric(PDFunds_2_TEXT)
+  ) %>%
+  select(
+    GrossSalary,
+    FTESalary,
+    ClinicRevenue,
+    ClinicClientsCount,
+    ClinicTotalTrainees,
+    HoursWorkClinic,
+    ClinicAge,
+    PD_amount
+  )
+
+
+# Display sample info
+cat("Total respondents:", nrow(dat), "\n")
+cat("Number of variables:", ncol(dat), "\n")
+```
+
+## Helper Function
+
+```{r}
+summarize_quant <- function(df, year_label) {
+  df %>%
+    pivot_longer(everything(), names_to = "Variable", values_to = "Value") %>%
+    filter(!is.na(Value)) %>%
+    group_by(Variable) %>%
+    summarise(
+      Year   = year_label,
+      N      = n(),
+      Median = median(Value),
+      Q1     = quantile(Value, 0.25),
+      Q3     = quantile(Value, 0.75),
+      Mean   = mean(Value),
+      SD     = sd(Value),
+      .groups = "drop"
+    )
+}
+
+```
+
+## Summary Stats
+
+```{r}
+summary_25 <- summarize_quant(dat25_quant, "2025")
+summary_26 <- summarize_quant(dat26_quant %>% 
+                                select(GrossSalary, FTESalary, ClinicRevenue,
+                                       ClinicClientsCount, ClinicTotalTrainees,
+                                       HoursWorkClinic, ClinicAge, PD_amount),
+                              "2026")
+
+summary_all <- bind_rows(summary_25, summary_26)
+
+```
+
+## Filter
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+vars_to_plot <- c(
+  "ClinicClientsCount",
+  "ClinicTotalTrainees",
+  "ClinicRevenue",
+  "GrossSalary",
+  "HoursWorkClinic",
+  "PD_amount"
+)
+
+plot_dat <- summary_all %>%
+  filter(Variable %in% vars_to_plot) %>%
+  mutate(
+    Year = factor(Year),
+    Variable = factor(Variable, levels = vars_to_plot)
+  )
+
+```
+
+## Visualizations
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+vars_to_plot <- c(
+  "ClinicClientsCount",
+  "ClinicTotalTrainees",
+  "ClinicRevenue",
+  "GrossSalary",
+  "HoursWorkClinic",
+  "PD_amount"
+)
+
+plot_dat <- summary_all %>%
+  filter(Variable %in% vars_to_plot) %>%
+  mutate(
+    Year = factor(Year),
+    Variable = factor(Variable, levels = vars_to_plot)
+  )
+
+plot_dat <- plot_dat %>%
+  mutate(
+    Variable = recode(
+      Variable,
+      ClinicClientsCount  = "Annual Clients Served",
+      ClinicTotalTrainees = "Total Trainees",
+      ClinicRevenue       = "Annual Clinic Revenue",
+      GrossSalary         = "Gross Salary",
+      HoursWorkClinic     = "Hours Worked per Week",
+      PD_amount           = "Professional Development Funds"
+    )
+  )
+
+ggplot(plot_dat, aes(x = Year, y = Median)) +
+  geom_errorbar(
+    aes(ymin = Q1, ymax = Q3),
+    width = 0.15,
+    linewidth = 1
+  ) +
+  geom_point(size = 3) +
+  facet_wrap(~ Variable, scales = "free_y") +
+  labs(
+    title = "Key Clinic Metrics Show Minimal Year-to-Year Change",
+    subtitle = "Medians with interquartile ranges (Q1–Q3), 2025 vs. 2026",
+    x = NULL,
+    y = NULL,
+    caption = "APTC Clinic Survey"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+```
+
+## Test of Equivalence
+
+```{r}
+long_dat <- bind_rows(
+  dat25_quant %>% mutate(Year = "2025"),
+  dat26_quant %>%
+    select(GrossSalary, FTESalary, ClinicRevenue,
+           ClinicClientsCount, ClinicTotalTrainees,
+           HoursWorkClinic, ClinicAge, PD_amount) %>%
+    mutate(Year = "2026")
+) %>%
+  pivot_longer(
+    cols = -Year,
+    names_to = "Variable",
+    values_to = "Value"
+  ) %>%
+  filter(!is.na(Value))
+
+library(TOSTER)
+
+run_tost <- function(x25, x26, var_name, eq_sd = 0.20) {
+
+  x25 <- na.omit(x25)
+  x26 <- na.omit(x26)
+
+  sd_pooled <- sqrt(
+    ((length(x25) - 1) * var(x25) +
+     (length(x26) - 1) * var(x26)) /
+    (length(x25) + length(x26) - 2)
+  )
+
+  low_eq  <- -eq_sd * sd_pooled
+  high_eq <-  eq_sd * sd_pooled
+
+  tost <- TOSTtwo(
+    m1 = mean(x25),
+    m2 = mean(x26),
+    sd1 = sd(x25),
+    sd2 = sd(x26),
+    n1 = length(x25),
+    n2 = length(x26),
+    low_eqbound  = low_eq,
+    high_eqbound = high_eq,
+    alpha = 0.05,
+    plot = FALSE,
+    verbose = FALSE
+  )
+
+  tibble(
+    Variable        = var_name,
+    N_2025          = length(x25),
+    N_2026          = length(x26),
+    Mean_2025       = mean(x25),
+    Mean_2026       = mean(x26),
+    Mean_Diff       = mean(x26) - mean(x25),
+    Low_EQ_Bound    = low_eq,
+    High_EQ_Bound   = high_eq,
+    TOST_p_lower    = tost$TOST_p1,
+    TOST_p_upper    = tost$TOST_p2,
+    Equivalent      = tost$TOST_p1 < .05 & tost$TOST_p2 < .05
+  )
+}
+
+
+key_vars <- c(
+  "ClinicAge",
+  "ClinicClientsCount",
+  "ClinicRevenue",
+  "ClinicTotalTrainees",
+  "FTESalary",
+  "GrossSalary",
+  "HoursWorkClinic",
+  "PD_amount"
+)
+run_tost_by_name <- function(var_name, dat25, dat26, eq_sd = 0.20) {
+
+  x25 <- dat25[[var_name]]
+  x26 <- dat26[[var_name]]
+
+  run_tost(
+    x25 = x25,
+    x26 = x26,
+    var_name = var_name,
+    eq_sd = eq_sd
+  )
+}
+library(purrr)
+
+tost_results <- map_dfr(
+  key_vars,
+  run_tost_by_name,
+  dat25 = dat25_quant,
+  dat26 = dat26_quant,
+  eq_sd = 0.20
+)
+
+tost_results
+
+```

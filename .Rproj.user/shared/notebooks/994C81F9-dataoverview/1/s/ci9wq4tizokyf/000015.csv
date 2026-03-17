@@ -1,0 +1,14 @@
+"0",""
+"0","if (revenue_checks$N_Above_1M > 0) {"
+"0","  cat(""\n⚠️ NOTE:"", revenue_checks$N_Above_1M, ""clinics report revenue above $1,000,000.\n"")"
+"0","  cat(""These are excluded from some visualizations. Consider if these are accurate or should be included.\n"")"
+"0","}"
+"1","
+⚠️ NOTE:"
+"1"," "
+"1","2"
+"1"," "
+"1","clinics report revenue above $1,000,000.
+"
+"1","These are excluded from some visualizations. Consider if these are accurate or should be included.
+"

@@ -1,0 +1,8 @@
+"0","ntt_table <- dat_simple %>% filter(is_ntt(PositionType)) %>% make_salary_table()"
+"0",""
+"0","ntt_table %>%"
+"0","  gt() %>%"
+"0","  tab_header(title = md(""**Average Faculty Salaries — Non-Tenure-Track (NTT)**""),"
+"0","             subtitle = ""Full-time and Part-time Averages (suppressed if n < 3)"") %>%"
+"0","  tab_style(style = cell_text(weight = ""bold""), locations = cells_column_labels(everything())) %>%"
+"0","  tab_source_note(source_note = md(""*Cells suppressed when based on fewer than 3 respondents*""))"

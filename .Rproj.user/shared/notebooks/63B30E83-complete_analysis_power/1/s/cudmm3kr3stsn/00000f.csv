@@ -1,0 +1,4 @@
+"0","#| label: export"
+"0",""
+"0","write.csv(results, ""power_results.csv"", row.names = FALSE)"
+"0","ggsave(""power_curve.png"", width = 10, height = 6, dpi = 300)"

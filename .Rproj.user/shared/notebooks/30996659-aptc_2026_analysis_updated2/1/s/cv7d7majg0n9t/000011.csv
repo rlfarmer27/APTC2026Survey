@@ -1,0 +1,6 @@
+"0",""
+"0","# FIX: Format only dollar columns, not N"
+"0","salary_stats %>%"
+"0","  mutate(across(c(Mean, SD, Median, Q1, Q3, Min, Max), ~dollar(.))) %>%"
+"0","  kable(caption = ""Overall Salary Statistics"") %>%"
+"0","  kable_styling()"
