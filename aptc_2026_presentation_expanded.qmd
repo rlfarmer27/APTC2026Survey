@@ -41,6 +41,17 @@ aptc_palette <- c(
  aptc_navy, "#454d5f", "#161b29"
 )
 
+# Tenure-track helper functions (defined once, used throughout)
+nz <- function(x) ifelse(is.na(x), "", as.character(x))
+is_tt <- function(x) {
+  str_detect(nz(x), regex("tenure[- ]track|tenured(?!.*non)", ignore_case = TRUE)) &
+  !str_detect(nz(x), regex("non.?tenure", ignore_case = TRUE))
+}
+is_ntt <- function(x) {
+  str_detect(nz(x), regex("non.?tenure|clinical.?track|instructor|lecturer|visiting",
+                           ignore_case = TRUE))
+}
+
 # Load and clean data (same as analysis)
 dat <- read_excel("dat.xlsx")
 dat <- dat[-1, ]
@@ -78,7 +89,10 @@ dat <- dat %>%
    Burnout_4 = as.numeric(Burnout_4),
    Burnout_5 = as.numeric(Burnout_5),
    FTESupportStaff = as.numeric(FTESupportStaff),
+   ClinicSupportStaff = as.numeric(ClinicSupportStaff),
    FTEGradStaff = as.numeric(FTEGradStaff),
+   GradStaff = as.numeric(GradStaff),
+   UgradStaff = as.numeric(UgradStaff),
    PostdocCount = as.numeric(PostdocCount),
    ClinicHours = as.numeric(ClinicHours),
    MaxTraineesTherapy = as.numeric(MaxTraineesTherapy),
@@ -103,15 +117,32 @@ dat <- dat %>%
 
 # Rank grouping
 dat <- dat %>%
- mutate(RankGrp = case_when(
-   str_detect(Rank, regex("assistant", ignore_case = TRUE)) ~ "Assistant Professor",
-   str_detect(Rank, regex("associate", ignore_case = TRUE)) ~ "Associate Professor",
-   str_detect(Rank, regex("^full|full professor", ignore_case = TRUE)) ~ "Full Professor",
-   str_detect(Rank, regex("lecturer|instructor", ignore_case = TRUE)) ~ "Lecturer",
-   str_detect(Rank, regex("staff|n/a|not applicable", ignore_case = TRUE)) ~ "Staff (N/A)",
-   !is.na(Rank) ~ "Other (specified)",
-   TRUE ~ "Unspecified Rank"
- ))
+ mutate(
+   # Coarse rank — used for charts that do not split by TT status
+   RankGrp = case_when(
+     str_detect(nz(Rank), regex("assistant", ignore_case = TRUE)) ~ "Assistant Professor",
+     str_detect(nz(Rank), regex("associate", ignore_case = TRUE)) ~ "Associate Professor",
+     str_detect(nz(Rank), regex("^full|full professor", ignore_case = TRUE)) ~ "Full Professor",
+     str_detect(nz(Rank), regex("lecturer|instructor", ignore_case = TRUE)) ~ "Lecturer",
+     str_detect(nz(Rank), regex("staff|n/a|not applicable", ignore_case = TRUE)) ~ "Staff (N/A)",
+     !is.na(Rank) ~ "Other (specified)",
+     TRUE ~ "Unspecified Rank"
+   ),
+   # Detailed rank — separates Clinical/NTT from TT at each level
+   RankGrpDetailed = case_when(
+     str_detect(nz(Rank), regex("assistant", ignore_case = TRUE)) & is_tt(PositionType)  ~ "TT Assistant Professor",
+     str_detect(nz(Rank), regex("assistant", ignore_case = TRUE)) & is_ntt(PositionType) ~ "Clinical/NTT Assistant Professor",
+     str_detect(nz(Rank), regex("assistant", ignore_case = TRUE))                        ~ "Assistant Professor (other)",
+     str_detect(nz(Rank), regex("associate", ignore_case = TRUE)) & is_tt(PositionType)  ~ "TT Associate Professor",
+     str_detect(nz(Rank), regex("associate", ignore_case = TRUE)) & is_ntt(PositionType) ~ "Clinical/NTT Associate Professor",
+     str_detect(nz(Rank), regex("associate", ignore_case = TRUE))                        ~ "Associate Professor (other)",
+     str_detect(nz(Rank), regex("^full|full professor", ignore_case = TRUE))             ~ "Full Professor",
+     str_detect(nz(Rank), regex("lecturer|instructor", ignore_case = TRUE))              ~ "Lecturer",
+     str_detect(nz(Rank), regex("staff|n/a|not applicable", ignore_case = TRUE))        ~ "Staff (N/A)",
+     !is.na(Rank) ~ "Other (specified)",
+     TRUE ~ "Unspecified Rank"
+   )
+ )
 ```
 
 # Sample Overview {background-color="#252b3b"}
@@ -276,11 +307,6 @@ Associate and Assistant Professor ranks are most common among clinic directors. 
 ## Academic Rank by Tenure Status
 
 ```{r}
-nz <- function(x) ifelse(is.na(x), "", x)
-is_tt <- function(x) str_detect(nz(x), regex("tenure[- ]track|tenured(?!.*non)", ignore_case = TRUE)) & 
-                     !str_detect(nz(x), regex("non.?tenure", ignore_case = TRUE))
-is_ntt <- function(x) str_detect(nz(x), regex("non.?tenure|clinical.?track|instructor|lecturer|staff|visiting", ignore_case = TRUE))
-
 rank_tenure <- dat %>%
   filter(!is.na(Rank), !is.na(PositionType)) %>%
   mutate(
@@ -417,15 +443,17 @@ The median gross salary is approximately \$104,000, with a mean of \$106,000. Th
 
 ```{r}
 dat %>%
- filter(!is.na(GrossSalary), !is.na(RankGrp)) %>%
- ggplot(aes(x = reorder(RankGrp, GrossSalary, median), y = GrossSalary, fill = RankGrp)) +
+ filter(!is.na(GrossSalary), !is.na(RankGrpDetailed),
+        RankGrpDetailed != "Unspecified Rank") %>%
+ ggplot(aes(x = reorder(RankGrpDetailed, GrossSalary, median),
+            y = GrossSalary, fill = RankGrpDetailed)) +
  geom_boxplot(alpha = 0.8, show.legend = FALSE) +
  geom_jitter(width = 0.2, alpha = 0.3, size = 2) +
  coord_flip() +
  scale_y_continuous(labels = dollar_format()) +
- scale_fill_manual(values = aptc_palette) +
+ scale_fill_manual(values = rep(aptc_palette, length.out = 9)) +
  labs(title = "Gross Salary by Academic Rank", x = NULL, y = "Gross Salary") +
- theme_minimal(base_size = 16) +
+ theme_minimal(base_size = 14) +
  theme(plot.title = element_text(face = "bold", color = aptc_navy))
 ```
 
@@ -437,21 +465,27 @@ As expected, salary increases with rank progression. Full professors have the hi
 
 ```{r}
 salary_by_rank <- dat %>%
- filter(!is.na(GrossSalary), !is.na(RankGrp)) %>%
- group_by(RankGrp) %>%
+ filter(!is.na(GrossSalary), !is.na(RankGrpDetailed),
+        RankGrpDetailed != "Unspecified Rank") %>%
+ group_by(RankGrpDetailed) %>%
  summarise(N = n(), Mean = mean(GrossSalary), Median = median(GrossSalary),
            SD = sd(GrossSalary), .groups = "drop") %>%
+ filter(N >= 3) %>%
  arrange(desc(Median))
 
 salary_by_rank %>%
- mutate(Mean = dollar(round(Mean)), Median = dollar(round(Median)), 
-        SD = dollar(round(SD))) %>%
- kable(col.names = c("Rank", "N", "Mean", "Median", "SD")) %>%
- kable_styling(bootstrap_options = c("striped", "hover"), font_size = 20)
+ mutate(
+   Mean   = dollar(round(Mean)),
+   Median = dollar(round(Median)),
+   SD     = ifelse(N < 5, "\u2014", dollar(round(SD)))
+ ) %>%
+ kable(col.names = c("Rank", "N", "Mean", "Median", "SD"),
+       caption = "Cells with N < 3 suppressed for privacy") %>%
+ kable_styling(bootstrap_options = c("striped", "hover"), font_size = 18)
 ```
 
 ::: notes
-This table shows salary statistics by rank. Note that cells with fewer than 3 respondents are suppressed for privacy.
+This table separates Clinical/NTT from TT positions at each rank level, matching the breakdown shared after the 2024 conference. Cells with fewer than 3 respondents are suppressed. SD is shown as — for cells with N \< 5.
 :::
 
 ## Salary by Contract Length
@@ -477,17 +511,13 @@ Tenured and permanent positions tend to have higher salaries than yearly or mult
 ## Salary by Position Type
 
 ```{r}
-nz2 <- function(x) ifelse(is.na(x), "", x)
-is_tt2  <- function(x) str_detect(nz2(x), regex("tenure[- ]track|tenured(?!.*non)", ignore_case = TRUE)) & !str_detect(nz2(x), regex("non.?tenure", ignore_case = TRUE))
-is_ntt2 <- function(x) str_detect(nz2(x), regex("non.?tenure|clinical.?track|instructor|lecturer|visiting", ignore_case = TRUE))
-
 salary_postype <- dat %>%
   filter(!is.na(GrossSalary), !is.na(PositionType)) %>%
   mutate(
     PosGroup = case_when(
-      is_tt2(PositionType) ~ "Tenure-Track/Tenured",
-      is_ntt2(PositionType) ~ "Non-Tenure-Track",
-      str_detect(nz2(PositionType), regex("admin|staff|director", ignore_case = TRUE)) ~ "Admin/Staff",
+      is_tt(PositionType)  ~ "Tenure-Track/Tenured",
+      is_ntt(PositionType) ~ "Non-Tenure-Track",
+      str_detect(nz(PositionType), regex("admin|staff|director", ignore_case = TRUE)) ~ "Admin/Staff",
       TRUE ~ "Other"
     )
   ) %>%
@@ -556,7 +586,7 @@ pd_amount_stats <- pd_dat %>%
 ### PD Funding Summary
 
 | Statistic | Value |
-|------------------------------------|------------------------------------|
+|----|----|
 | N | `r pd_amount_stats$N` |
 | Mean | `r dollar(round(pd_amount_stats$Mean))` |
 | Median | `r dollar(round(pd_amount_stats$Median))` |
@@ -809,7 +839,7 @@ ggplot(resp_summary, aes(x = reorder(Responsibility, Count), y = Count, fill = R
 Administration and supervision are near-universal responsibilities. Direct patient services, teaching, and research are also common, underscoring the multi-faceted nature of the clinic director role.
 :::
 
-## Clinic Hours & Coverage
+## Clinic Hours
 
 :::::: columns
 ::: {.column width="50%"}
@@ -1118,9 +1148,18 @@ ggplot(ai_clindir, aes(x = AIUseClinDir, y = Percentage, fill = AIUseClinDir)) +
 ai_students <- dat %>%
   filter(!is.na(AIUseStudentsAllowed)) %>%
   count(AIUseStudentsAllowed) %>%
-  mutate(Percentage = round(100 * n / sum(n), 1))
+  mutate(
+    Percentage = round(100 * n / sum(n), 1),
+    Label = case_when(
+      str_detect(AIUseStudentsAllowed, regex("unrestricted|anyone", ignore_case = TRUE)) ~ "Yes, unrestricted",
+      str_detect(AIUseStudentsAllowed, regex("limited|cases only", ignore_case = TRUE))  ~ "Yes, limited cases only",
+      str_detect(AIUseStudentsAllowed, regex("^no$", ignore_case = TRUE))                ~ "No",
+      str_detect(AIUseStudentsAllowed, regex("not.*explicit|haven", ignore_case = TRUE)) ~ "Not explicitly addressed",
+      TRUE ~ str_trunc(AIUseStudentsAllowed, 30)
+    )
+  )
 
-ggplot(ai_students, aes(x = AIUseStudentsAllowed, y = Percentage, fill = AIUseStudentsAllowed)) +
+ggplot(ai_students, aes(x = Label, y = Percentage, fill = Label)) +
   geom_col(show.legend = FALSE) +
   geom_text(aes(label = paste0(n, " (", Percentage, "%)")), vjust = -0.3, size = 5) +
   scale_y_continuous(limits = c(0, 100)) +
@@ -1318,17 +1357,13 @@ Burnout scores vary across dimensions. These indicators help us understand the c
 ## Burnout by Position Type
 
 ```{r}
-nz3 <- function(x) ifelse(is.na(x), "", x)
-is_tt3  <- function(x) str_detect(nz3(x), regex("tenure[- ]track|tenured(?!.*non)", ignore_case = TRUE)) & !str_detect(nz3(x), regex("non.?tenure", ignore_case = TRUE))
-is_ntt3 <- function(x) str_detect(nz3(x), regex("non.?tenure|clinical.?track|instructor|lecturer|visiting", ignore_case = TRUE))
-
 burnout_by_pos <- dat %>%
   filter(!is.na(PositionType)) %>%
   mutate(
     Burnout_Composite = rowMeans(select(., starts_with("Burnout_")), na.rm = TRUE),
     TenureStatus = case_when(
-      is_tt3(PositionType) ~ "TT/Tenured",
-      is_ntt3(PositionType) ~ "Non-Tenure-Track",
+      is_tt(PositionType)  ~ "TT/Tenured",
+      is_ntt(PositionType) ~ "Non-Tenure-Track",
       TRUE ~ "Other/Admin"
     )
   ) %>%
@@ -1412,19 +1447,19 @@ The same aspects of the job that directors find positive can also contribute to 
 ::: {.column width="50%"}
 ### Sample & Position
 
-- **`r nrow(dat)`** respondents; mostly faculty
-- Median **`r role_stats$Median`** years in role
-- Most hold non-tenure-track positions
-- Majority report to department chair
+-   **`r nrow(dat)`** respondents; mostly faculty
+-   Median **`r role_stats$Median`** years in role
+-   Most hold non-tenure-track positions
+-   Majority report to department chair
 :::
 
 ::: {.column width="50%"}
 ### Compensation
 
-- Median salary: **`r dollar(salary_stats$Median)`**
-- Clear progression by rank
-- Most receive PD funding
-- Salary funded mainly by dept/university
+-   Median salary: **`r dollar(salary_stats$Median)`**
+-   Clear progression by rank
+-   Most receive PD funding
+-   Salary funded mainly by dept/university
 :::
 :::::
 
@@ -1434,19 +1469,19 @@ The same aspects of the job that directors find positive can also contribute to 
 ::: {.column width="50%"}
 ### Clinic Operations
 
-- Median **`r round(client_stats$Median)`** clients/year
-- Therapy + assessment; 89% sliding scale
-- EMR: 92%, telehealth: 94%
-- AI adoption limited (~13%)
+-   Median **`r round(client_stats$Median)`** clients/year
+-   Therapy + assessment; 89% sliding scale
+-   EMR: 92%, telehealth: 94%
+-   AI adoption limited (\~13%)
 :::
 
 ::: {.column width="50%"}
 ### Wellbeing & Mission
 
-- ~75% support staff; ~67% grad assistants
-- DEI/SJ activities widespread
-- Burnout present; meaning intact
-- Colleagues and autonomy are protective
+-   \~75% support staff; \~67% grad assistants
+-   DEI/SJ activities widespread
+-   Burnout present; meaning intact
+-   Colleagues and autonomy are protective
 :::
 :::::
 
@@ -1456,54 +1491,61 @@ The same aspects of the job that directors find positive can also contribute to 
 ::: {.column width="50%"}
 **Was the survey too long?**
 
-- 36% — no, length is fine
-- 49% — yes, but necessary
-- 11% — yes, shorten it
+-   36% — no, length is fine
+-   49% — yes, but necessary
+-   11% — yes, shorten it
 
 **Other feedback**
 
-- Every other year? Little variation year to year
-- Q & A: what questions do you have for us?
+-   Every other year? Little variation year to year
+-   Q & A: what questions do you have for us?
 :::
 
 ::: {.column width="50%"}
 **What do you want to see more of? Less of?**
 
-- "More on unit (workload assignments) and salary data"
-- "Bilingual service provision (student support, supervision, etc.)"
-- Less "details of how many students are supervised"
-- "You gotta do whatcha gotta do" 😊
+-   "More on unit (workload assignments) and salary data"
+-   "Bilingual service provision (student support, supervision, etc.)"
+-   Less "details of how many students are supervised"
+-   "You gotta do whatcha gotta do" 😊
 :::
 :::::
 
-## {background-color="white"}
+##  {background-color="white"}
 
-<div style="display:flex; justify-content:center; align-items:center; height:70vh; flex-direction:column; gap:1.5rem; text-align:center;">
+::: {style="display:flex; justify-content:center; align-items:center; height:70vh; flex-direction:column; gap:1.5rem; text-align:center;"}
 <h2>Now over to you...</h2>
-<p style="font-size:1.4em;">Let's Discuss.</p>
-<p style="font-size:1.2em; font-style:italic;">Richard will help manage the room!</p>
-</div>
+
+<p style="font-size:1.4em;">
+
+Let's Discuss.
+
+</p>
+
+<p style="font-size:1.2em; font-style:italic;">
+
+Richard will help manage the room!
+
+</p>
+:::
 
 ## Contact Us {background-color="#252b3b"}
 
 ::::: columns
 ::: {.column width="60%"}
-**Jacqueline Hersh, Ph.D.**
-Research Committee Co-Chair
+**Jacqueline Hersh, Ph.D.** Research Committee Co-Chair
 
-**Ryan L. Farmer, Ph.D.**
-Research Committee Co-Chair
+**Ryan L. Farmer, Ph.D.** Research Committee Co-Chair
 
-**Richard LeBeau, Ph.D.**
-Research Committee Member
+**Richard LeBeau, Ph.D.** Research Committee Member
 :::
 
 ::: {.column width="40%"}
 ### Resources
 
-- Full analysis report coming soon
-- Data requests: Contact Research Committee
-- [aptc.org](https://aptc.org)
+-   Full analysis report coming soon
+-   Data requests: Contact Research Committee
+-   [aptc.org](https://aptc.org)
 :::
 :::::
 
