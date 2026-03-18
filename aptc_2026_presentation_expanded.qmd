@@ -1,7 +1,7 @@
 ---
 title: "APTC 2026 Survey Results"
 subtitle: "Association of Psychology Training Clinics"
-author: "Jacqueline Hersh, Ph.D.<br>Ryan L. Farmer, Ph.D.<br>Richard LeBeau, Ph.D."
+author: "Jackie Hersh, Ph.D.<br>Ryan L. Farmer, Ph.D.<br>Richard LeBeau, Ph.D."
 date: today
 format:
   revealjs:
@@ -136,7 +136,9 @@ dat <- dat %>%
      str_detect(nz(Rank), regex("associate", ignore_case = TRUE)) & is_tt(PositionType)  ~ "TT Associate Professor",
      str_detect(nz(Rank), regex("associate", ignore_case = TRUE)) & is_ntt(PositionType) ~ "Clinical/NTT Associate Professor",
      str_detect(nz(Rank), regex("associate", ignore_case = TRUE))                        ~ "Associate Professor (other)",
-     str_detect(nz(Rank), regex("^full|full professor", ignore_case = TRUE))             ~ "Full Professor",
+     str_detect(nz(Rank), regex("^full|full professor", ignore_case = TRUE)) & is_tt(PositionType)  ~ "TT Full Professor",
+     str_detect(nz(Rank), regex("^full|full professor", ignore_case = TRUE)) & is_ntt(PositionType) ~ "Clinical/NTT Full Professor",
+    str_detect(nz(Rank), regex("^full|full professor", ignore_case = TRUE))                        ~ "Full Professor (other)",
      str_detect(nz(Rank), regex("lecturer|instructor", ignore_case = TRUE))              ~ "Lecturer",
      str_detect(nz(Rank), regex("staff|n/a|not applicable", ignore_case = TRUE))        ~ "Staff (N/A)",
      !is.na(Rank) ~ "Other (specified)",
@@ -451,7 +453,7 @@ dat %>%
  geom_jitter(width = 0.2, alpha = 0.3, size = 2) +
  coord_flip() +
  scale_y_continuous(labels = dollar_format()) +
- scale_fill_manual(values = rep(aptc_palette, length.out = 9)) +
+ scale_fill_manual(values = rep(aptc_palette, length.out = 20)) +
  labs(title = "Gross Salary by Academic Rank", x = NULL, y = "Gross Salary") +
  theme_minimal(base_size = 14) +
  theme(plot.title = element_text(face = "bold", color = aptc_navy))
@@ -1426,7 +1428,60 @@ The same aspects of the job that directors find positive can also contribute to 
 
 ## Burnout & Satisfaction
 
-![](aptc_2026_presentation_expanded_files/slide_burnout.PNG){width="100%" height="100%"}
+::::: columns
+::: {.column width="50%"}
+
+#### Burnout {style="color: #ff6544;"}
+```{r}
+burnout_composite <- dat %>%
+  mutate(Burnout_Composite = rowMeans(
+    select(., Burnout_1, Burnout_2, Burnout_3, Burnout_4, Burnout_5),
+    na.rm = TRUE
+  )) %>%
+  filter(!is.na(Burnout_Composite)) %>%
+  summarise(
+    N      = n(),
+    Mean   = round(mean(Burnout_Composite), 2),
+    SD     = round(sd(Burnout_Composite), 2),
+    Median = round(median(Burnout_Composite), 2),
+    Min    = round(min(Burnout_Composite), 2),
+    Max    = round(max(Burnout_Composite), 2)
+  )
+```
+
+On a 5-item burnout scale (0–6), directors averaged **`r burnout_composite$Mean`** (SD = `r burnout_composite$SD`), range `r burnout_composite$Min`–`r burnout_composite$Max`. Higher scores indicate more burnout. This reflects a moderate level of burnout.
+
+![](aptc_2026_presentation_expanded_files/burnoutQR.png){width="120px"}
+
+[Scan for full list of responses]{style="font-size: 0.7em;"}
+
+::: {.callout-note}
+Prior year single-item mean = 3.36 (SD = 1.43). Scale change in 2026 to 5-item CBI for greater reliability.
+:::
+
+:::
+
+::: {.column width="50%"}
+
+#### What Helps Us Overcome Burnout? {style="color: #252b3b;"}
+
+- **Professional lifelines** — APTC colleagues, peer consultation, mentorship
+- **Saying "No"** — strategic refusal, digital detox, protected time
+- **Flexibility & autonomy** — remote work, environment shifts, self-set hours
+- **Self-care beyond the surface** — personal therapy, external identities, humor & hobbies
+- **Practical realities** — salary, benefits, retirement vesting
+- **Systemic problem solving** — building systems, delegating, advocating for resources
+
+:::
+:::::
+
+::: {.callout-tip appearance="minimal"}
+Special shoutout to the person who put *"decreasing how many f\*cks I give every year"* 🌟
+:::
+
+::: notes
+The 2026 survey moved to a 5-item Copenhagen Burnout Inventory composite for greater reliability. The prior year used a single-item measure (mean = 3.36). BurnoutOvercome is a qualitative variable — six major themes emerged from open-ended responses about staying in the role and overcoming burnout, summarized in the bullet points above.
+:::
 
 ## Lessons from the Past
 
@@ -1534,7 +1589,7 @@ Richard will help manage the room!
 
 ::::: columns
 ::: {.column width="60%"}
-**Jacqueline Hersh, Ph.D.**
+**Jackie Hersh, Ph.D.**
 Research Committee Co-Chair
 [hershjr@appstate.edu](mailto:hershjr@appstate.edu)
 
@@ -1555,7 +1610,7 @@ Research Committee Member
 ### Resources
 
 -   Full analysis report coming soon
--   Data requests: Contact Jacqueline & Ryan
+-   Data requests: Contact Jackie & Ryan
 -   [aptc.org](https://aptc.org)
 :::
 :::::
