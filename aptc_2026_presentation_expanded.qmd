@@ -1,7 +1,7 @@
 ---
 title: "APTC 2026 Survey Results"
 subtitle: "Association of Psychology Training Clinics"
-author: "Jacqueline Hersh, Ph.D. & Ryan L. Farmer, Ph.D."
+author: "Jacqueline Hersh, Ph.D.<br>Ryan L. Farmer, Ph.D.<br>Richard LeBeau, Ph.D."
 date: today
 format:
   revealjs:
@@ -772,10 +772,10 @@ Most clinics fall in the 1,000 to 5,000 square foot range, with the most common 
 ```{r}
 staff_presence <- dat %>%
  summarise(
-   `Has Support Staff` = mean(as.numeric(ClinicSupportStaff) > 0, na.rm = TRUE) * 100,
-   `Has Grad Staff` = mean(as.numeric(GradStaff) > 0, na.rm = TRUE) * 100,
-   `Has Undergrad Staff` = mean(as.numeric(UgradStaff) > 0, na.rm = TRUE) * 100,
-   `Has Postdocs` = mean(as.numeric(PostdocCount) > 0, na.rm = TRUE) * 100
+   `Has Support Staff`   = mean(!is.na(FTESupportStaff) & FTESupportStaff > 0, na.rm = TRUE) * 100,
+   `Has Grad Staff`      = mean(!is.na(FTEGradStaff) & FTEGradStaff > 0, na.rm = TRUE) * 100,
+   `Has Undergrad Staff` = mean(!is.na(HoursUgradStaff) & HoursUgradStaff > 0, na.rm = TRUE) * 100,
+   `Has Postdocs`        = mean(!is.na(PostdocCount) & PostdocCount > 0, na.rm = TRUE) * 100
  ) %>%
  pivot_longer(everything(), names_to = "Staff Type", values_to = "Percentage")
 
@@ -791,7 +791,8 @@ ggplot(staff_presence, aes(x = reorder(`Staff Type`, Percentage), y = Percentage
 ```
 
 ::: notes
-Most clinics have support staff and graduate assistants. Fewer have undergraduate staff, and only about 9% have postdoctoral trainees.
+About half of clinics report having support staff (57%) or graduate staff (50%). 
+Fewer have undergraduate staff (29%), and postdoctoral trainees remain rare (7%).
 :::
 
 ## Director Responsibilities
@@ -1533,18 +1534,28 @@ Richard will help manage the room!
 
 ::::: columns
 ::: {.column width="60%"}
-**Jacqueline Hersh, Ph.D.** Research Committee Co-Chair
+**Jacqueline Hersh, Ph.D.**
+Research Committee Co-Chair
+[hershjr@appstate.edu](mailto:hershjr@appstate.edu)
 
-**Ryan L. Farmer, Ph.D.** Research Committee Co-Chair
+&nbsp;
 
-**Richard LeBeau, Ph.D.** Research Committee Member
+**Ryan L. Farmer, Ph.D.**
+Research Committee Co-Chair
+[rlfarmer@memphis.edu](mailto:rlfarmer@memphis.edu)
+
+&nbsp;
+
+**Richard LeBeau, Ph.D.**<br>
+Research Committee Member
+[rlebeau@ucla.edu](mailto:rlebeau@ucla.edu)
 :::
 
 ::: {.column width="40%"}
 ### Resources
 
 -   Full analysis report coming soon
--   Data requests: Contact Research Committee
+-   Data requests: Contact Jacqueline & Ryan
 -   [aptc.org](https://aptc.org)
 :::
 :::::
