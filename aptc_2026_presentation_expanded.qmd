@@ -1463,6 +1463,46 @@ Prior year single-item mean = 3.36 (SD = 1.43). Scale change in 2026 to 5-item C
 
 ::: {.column width="50%"}
 
+#### Overcoming Burnout: Major Themes {style="color: #252b3b;"}
+
+::::: columns
+::: {.column width="50%"}
+
+**1. Professional Lifelines & Community**
+
+APTC colleagues, the listserv, and peer consultation serve as primary buffers against administrative stress. Leaning into the supervisor role is a frequent reset.
+
+**2. Reclaiming Boundaries & Saying "No"**
+
+Strategic refusal of extra roles, removing email from phones, protecting summers, and limiting clinic hours to specific days.
+
+**3. Flexibility as a Mental Health Tool**
+
+Autonomy over hours and remote work are major reasons for staying. Many find perspective by comparing to prior high-volume clinical environments.
+
+:::
+
+::: {.column width="50%"}
+
+**4. Self-Care Beyond the Surface**
+
+Personal therapy, intentionally decoupling identity from job title, and investing in hobbies and humor outside of psychology.
+
+**5. Practical & Financial Realities**
+
+Salary, benefits, and retirement vesting are honest stabilizing factors. A few candidly note that lack of viable alternatives keeps them in the role.
+
+**6. Systemic Problem Solving**
+
+Building workable systems, delegating to administrative staff, and refusing new initiatives until core resource needs are met.
+
+:::
+:::::
+
+::: notes
+These six themes emerged from open-ended responses to what helps directors stay in the role and overcome burnout. Consistent with prior years, community and boundaries dominate — but the 2026 data shows a notable increase in candor around financial and practical realities as stabilizing factors.
+:::
+
 #### What Helps Us Overcome Burnout? {style="color: #252b3b;"}
 
 - **Professional lifelines** — APTC colleagues, peer consultation, mentorship
@@ -1501,6 +1541,7 @@ The 2026 survey moved to a 5-item Copenhagen Burnout Inventory composite for gre
 
 ::::: columns
 ::: {.column width="50%"}
+
 ### Sample & Position
 
 -   **`r nrow(dat)`** respondents; mostly faculty
