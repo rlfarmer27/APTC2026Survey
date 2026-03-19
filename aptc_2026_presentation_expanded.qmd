@@ -6,6 +6,7 @@ date: today
 format:
   revealjs:
     theme: [default, custom.scss]
+    margin: 0.05
     slide-number: true
     logo: ""
     footer: "APTC 2026 Annual Survey"
@@ -1017,40 +1018,67 @@ Median clinic revenue is approximately \$44,000, though there is substantial var
 :::
 
 ## Fee Structures
-
 ```{r}
-therapy_fee_vars <- c("ClinicTherapyFees_1", "ClinicTherapyFees_2", "ClinicTherapyFees_3")
-assmnt_fee_vars  <- c("ClinicAssmntFees_1", "ClinicAssmntFees_2", "ClinicAssmntFees_3")
-
-fee_summary <- function(vars, service_name) {
+fee_wide <- function(vars, service_name) {
   dat %>%
     select(all_of(vars)) %>%
-    pivot_longer(everything(), names_to = "Variable", values_to = "Value") %>%
-    filter(!is.na(Value), Value > 0, Value < 10000) %>%
-    mutate(FeeType = case_when(
-      str_detect(Variable, "_1$") ~ "Minimum",
-      str_detect(Variable, "_2$") ~ "Maximum",
-      str_detect(Variable, "_3$") ~ "Typical"
-    )) %>%
-    group_by(FeeType) %>%
-    summarise(N = n(), Mean = round(mean(Value), 0), Median = round(median(Value), 0), .groups = "drop") %>%
-    mutate(Service = service_name)
+    mutate(across(everything(), as.numeric)) %>%
+    filter(.data[[vars[1]]] > 0, .data[[vars[2]]] > 0) %>%
+    summarise(
+      Min_Mean   = round(mean(.data[[vars[1]]], na.rm = TRUE), 2),
+      Min_Median = round(median(.data[[vars[1]]], na.rm = TRUE), 2),
+      Max_Mean   = round(mean(.data[[vars[2]]], na.rm = TRUE), 2),
+      Max_Median = round(median(.data[[vars[2]]], na.rm = TRUE), 2),
+      Typ_Mean   = round(mean(.data[[vars[3]]], na.rm = TRUE), 2),
+      Typ_Median = round(median(.data[[vars[3]]], na.rm = TRUE), 2),
+      Range      = paste0(
+        dollar(round(min(.data[[vars[1]]], na.rm = TRUE))),
+        " \u2013 ",
+        dollar(round(max(.data[[vars[2]]], na.rm = TRUE)))
+      )
+    ) %>%
+    mutate(Service = service_name) %>%
+    mutate(across(c(Min_Mean, Min_Median, Max_Mean, Max_Median, Typ_Mean, Typ_Median), dollar))
 }
 
-therapy_fees <- fee_summary(therapy_fee_vars, "Therapy")
-assmnt_fees  <- fee_summary(assmnt_fee_vars, "Assessment")
+therapy_wide <- fee_wide(
+  c("ClinicTherapyFees_1", "ClinicTherapyFees_2", "ClinicTherapyFees_3"),
+  "Therapy"
+)
+assmnt_wide <- fee_wide(
+  c("ClinicAssmntFees_1", "ClinicAssmntFees_2", "ClinicAssmntFees_3"),
+  "Assessment"
+)
 
-bind_rows(therapy_fees, assmnt_fees) %>%
-  select(Service, FeeType, N, Mean, Median) %>%
-  mutate(Mean = dollar(Mean), Median = dollar(Median)) %>%
-  kable(col.names = c("Service", "Fee Type", "N", "Mean", "Median"),
-        caption = "Standard Fee Structures") %>%
-  kable_styling(bootstrap_options = c("striped", "hover"), font_size = 18) %>%
-  collapse_rows(columns = 1, valign = "top")
+bind_rows(assmnt_wide, therapy_wide) %>%
+  select(Service, 
+         Min_Mean, Min_Median, 
+         Max_Mean, Max_Median, 
+         Typ_Mean, Typ_Median, 
+         Range) %>%
+  kable(
+    col.names = c("Service",
+                  "Avg", "Median",
+                  "Avg", "Median", 
+                  "Avg", "Median",
+                  "Range"),
+    caption = "Standard Fee Structures"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), font_size = 16) %>%
+  add_header_above(c(" " = 1, 
+                     "Minimum Fee" = 2, 
+                     "Maximum Fee" = 2, 
+                     "Typical Fee" = 2, 
+                     " " = 1)) %>%
+  column_spec(1, bold = TRUE)
 ```
 
+::: callout-note
+89% of clinics offer sliding scale fees. These data reflect those clinics.
+:::
+
 ::: notes
-Assessment fees are considerably higher than therapy fees, reflecting the time and materials involved. Most clinics use sliding scale structures, making these maximums rarely charged.
+Assessment fees are considerably higher than therapy fees. Most clinics use sliding scale structures, making these maximums rarely charged. Medians are more informative than means given the small N of respondents reporting fixed fees.
 :::
 
 ## Insurance Billing
@@ -1428,8 +1456,9 @@ The same aspects of the job that directors find positive can also contribute to 
 
 ## Burnout & Satisfaction
 
+::: {style="font-size: 0.82em;"}
 ::::: columns
-::: {.column width="50%"}
+::: {.column width="45%"}
 
 #### Burnout {style="color: #ff6544;"}
 ```{r}
@@ -1440,100 +1469,102 @@ burnout_composite <- dat %>%
   )) %>%
   filter(!is.na(Burnout_Composite)) %>%
   summarise(
-    N      = n(),
-    Mean   = round(mean(Burnout_Composite), 2),
-    SD     = round(sd(Burnout_Composite), 2),
-    Median = round(median(Burnout_Composite), 2),
-    Min    = round(min(Burnout_Composite), 2),
-    Max    = round(max(Burnout_Composite), 2)
+    N    = n(),
+    Mean = round(mean(Burnout_Composite), 2),
+    SD   = round(sd(Burnout_Composite), 2),
+    Min  = round(min(Burnout_Composite), 2),
+    Max  = round(max(Burnout_Composite), 2)
+  )
+
+burnout_1_stats <- dat %>%
+  filter(!is.na(Burnout_1)) %>%
+  summarise(
+    Mean = round(mean(Burnout_1), 2),
+    SD   = round(sd(Burnout_1), 2)
   )
 ```
 
-On a 5-item burnout scale (0–6), directors averaged **`r burnout_composite$Mean`** (SD = `r burnout_composite$SD`), range `r burnout_composite$Min`–`r burnout_composite$Max`. Higher scores indicate more burnout. This reflects a moderate level of burnout.
+On a 5-item scale (0–6), directors averaged **`r burnout_composite$Mean`** (SD = `r burnout_composite$SD`), range `r burnout_composite$Min`–`r burnout_composite$Max`. Higher = more burnout.
 
-![](aptc_2026_presentation_expanded_files/burnoutQR.png){width="120px"}
+*Single item ("How burnt out are you?"): M = `r burnout_1_stats$Mean`, SD = `r burnout_1_stats$SD` (cf. 3.36 in 2025)*
 
-[Scan for full list of responses]{style="font-size: 0.7em;"}
-
-::: {.callout-note}
-Prior year single-item mean = 3.36 (SD = 1.43). Scale change in 2026 to 5-item CBI for greater reliability.
+::: {.callout-note style="font-size: 0.75em;"}
+2026 uses 5-item CBI for greater reliability. Prior year single-item mean = 3.36 (SD = 1.43).
 :::
 
-:::
+![](aptc_2026_presentation_expanded_files/burnoutQR.png){width="90px"}
 
-::: {.column width="50%"}
-
-#### Overcoming Burnout: Major Themes {style="color: #252b3b;"}
-
-::::: columns
-::: {.column width="50%"}
-
-**1. Professional Lifelines & Community**
-
-APTC colleagues, the listserv, and peer consultation serve as primary buffers against administrative stress. Leaning into the supervisor role is a frequent reset.
-
-**2. Reclaiming Boundaries & Saying "No"**
-
-Strategic refusal of extra roles, removing email from phones, protecting summers, and limiting clinic hours to specific days.
-
-**3. Flexibility as a Mental Health Tool**
-
-Autonomy over hours and remote work are major reasons for staying. Many find perspective by comparing to prior high-volume clinical environments.
+[Scan for full responses]{style="font-size: 0.65em;"}
 
 :::
 
-::: {.column width="50%"}
+::: {.column width="55%"}
 
-**4. Self-Care Beyond the Surface**
-
-Personal therapy, intentionally decoupling identity from job title, and investing in hobbies and humor outside of psychology.
-
-**5. Practical & Financial Realities**
-
-Salary, benefits, and retirement vesting are honest stabilizing factors. A few candidly note that lack of viable alternatives keeps them in the role.
-
-**6. Systemic Problem Solving**
-
-Building workable systems, delegating to administrative staff, and refusing new initiatives until core resource needs are met.
-
+::: {.callout-tip appearance="minimal" style="font-size: 0.72em;"}
+Special shoutout to the person who put *"decreasing how many f\*cks I give every year"* 🌟
 :::
-:::::
-
-::: notes
-These six themes emerged from open-ended responses to what helps directors stay in the role and overcome burnout. Consistent with prior years, community and boundaries dominate — but the 2026 data shows a notable increase in candor around financial and practical realities as stabilizing factors.
-:::
-
+::: {style="font-size: 0.72em;"}
 #### What Helps Us Overcome Burnout? {style="color: #252b3b;"}
 
 - **Professional lifelines** — APTC colleagues, peer consultation, mentorship
 - **Saying "No"** — strategic refusal, digital detox, protected time
 - **Flexibility & autonomy** — remote work, environment shifts, self-set hours
-- **Self-care beyond the surface** — personal therapy, external identities, humor & hobbies
+- **Self-care** — personal therapy, external identities, humor & hobbies
 - **Practical realities** — salary, benefits, retirement vesting
-- **Systemic problem solving** — building systems, delegating, advocating for resources
+- **Systemic problem solving** — workable systems, delegating, advocacy
+:::
 
 :::
 :::::
-
-::: {.callout-tip appearance="minimal"}
-Special shoutout to the person who put *"decreasing how many f\*cks I give every year"* 🌟
 :::
 
 ::: notes
-The 2026 survey moved to a 5-item Copenhagen Burnout Inventory composite for greater reliability. The prior year used a single-item measure (mean = 3.36). BurnoutOvercome is a qualitative variable — six major themes emerged from open-ended responses about staying in the role and overcoming burnout, summarized in the bullet points above.
+The 2026 survey moved to a 5-item CBI composite for greater reliability. Single-item comparison to prior year available via Burnout_1. BurnoutOvercome open-ended themes summarized in bullets.
 :::
 
-## Lessons from the Past
+## Overcoming Burnout: Major Themes (1/2)
 
-![](aptc_2026_presentation_expanded_files/slide_lessons.PNG){width="100%" height="100%"}
+::: {style="font-size: 0.78em;"}
+::::: columns
+::: {.column width="50%"}
+**1. Professional Lifelines & Community**
 
-## Supporting New Directors
+APTC colleagues, the listserv, and peer consultation serve as primary buffers. Leaning into the supervisor role is a frequent reset.
 
-![](aptc_2026_presentation_expanded_files/slide_newdirectors.PNG){width="100%" height="100%"}
+**2. Reclaiming Boundaries & Saying "No"**
 
-## Best Part of Your Job
+Strategic refusal of extra roles, removing email from phones, protecting summers, limiting clinic hours.
+:::
 
-![](aptc_2026_presentation_expanded_files/slide_bestpart.PNG){width="100%" height="100%"}
+::: {.column width="50%"}
+**3. Flexibility as a Mental Health Tool**
+
+Autonomy over hours and remote work are major reasons for staying. Many gain perspective vs. prior high-volume environments.
+
+**4. Self-Care Beyond the Surface**
+
+Personal therapy, decoupling identity from job title, investing in hobbies and humor outside psychology.
+:::
+:::::
+:::
+
+## Overcoming Burnout: Major Themes (2/2)
+
+::: {style="font-size: 0.78em;"}
+::::: columns
+::: {.column width="50%"}
+**5. Practical & Financial Realities**
+
+Salary, benefits, and retirement vesting are honest stabilizing factors. A few note lack of viable alternatives keeps them in the role.
+:::
+
+::: {.column width="50%"}
+**6. Systemic Problem Solving**
+
+Building workable systems, delegating to administrative staff, refusing new initiatives until core needs are met.
+:::
+:::::
+:::
 
 # Summary {background-color="#252b3b"}
 
@@ -1586,27 +1617,56 @@ The 2026 survey moved to a 5-item Copenhagen Burnout Inventory composite for gre
 
 ::::: columns
 ::: {.column width="50%"}
-**Was the survey too long?**
+```{r}
+survey_length <- dat %>%
+  filter(!is.na(SrvtLength)) %>%
+  count(SrvtLength) %>%
+  mutate(Percentage = round(100 * n / sum(n), 1)) %>%
+  arrange(desc(n))
+```
 
--   36% — no, length is fine
--   49% — yes, but necessary
--   11% — yes, shorten it
+**Was the survey too long?**
+```{r}
+survey_length %>%
+  kable(col.names = c("Response", "N", "%")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), font_size = 16)
+```
 
 **Other feedback**
 
--   Every other year? Little variation year to year
--   Q & A: what questions do you have for us?
+- Carry forward stable data year-to-year; alternate AI & DEI questions
+- Permanent clinic profiles for space, services, funding — updated as needed
+- Some quantitative items could rotate every other year
 :::
 
 ::: {.column width="50%"}
-**What do you want to see more of? Less of?**
+**What do you want to see more of?**
 
--   "More on unit (workload assignments) and salary data"
--   "Bilingual service provision (student support, supervision, etc.)"
--   Less "details of how many students are supervised"
--   "You gotta do whatcha gotta do" 😊
+- Student caseload for therapy and assessment
+- Stipends, course release, and summer salary detail
+- Data breakdowns by clinic size
+- Autonomy in decision-making vs. faculty approval
+- Assessment practices and report writing styles
+- Digital therapeutics and client AI use
+
+**What do you want to see less of?**
+
+- Space/square footage (*"Girl, no. Do most people know the square footage of their clinic?"*)
+- Detailed clinic operations — too varied to be useful across clinics
+- Going back to calculate prior year numbers under time pressure
 :::
 :::::
+
+## A Case for Biennial Surveys
+
+![](aptc_2026_presentation_expanded_files/25-26.png){width="95%"}
+
+::: {.callout-note style="font-size: 0.7em;"}
+Key clinic metrics show minimal year-to-year change — consistent with sampling 
+variability rather than true shifts. Member feedback echoes this. A full survey 
+every 2–3 years with a short annual pulse on fast-moving topics (AI, DEI, burnout) 
+may better respect member time while preserving data quality.
+:::
 
 ##  {background-color="white"}
 
