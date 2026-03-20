@@ -1615,9 +1615,9 @@ Scan for more of what y'all had to say about burnout.
 ::: {.column width="50%"}
 ### Wellbeing & Mission
 
--   \~75% support staff; \~67% grad assistants
+-   \~57% support staff; \~50% grad assistants
 -   DEI/SJ activities widespread
--   Burnout present; meaning intact
+-   Burnout moderate (M = 2.24; scale 0-6)
 -   Colleagues and autonomy are protective
 :::
 :::::
