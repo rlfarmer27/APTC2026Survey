@@ -355,7 +355,7 @@ ggplot(sup_summary, aes(x = reorder(Supervisor, n), y = Percentage, fill = Super
   geom_text(aes(label = paste0(n, " (", Percentage, "%)")), hjust = -0.1, size = 5) +
   coord_flip() +
   scale_fill_manual(values = aptc_palette) +
-  scale_y_continuous(limits = c(0, 60)) +
+  scale_y_continuous(limits = c(0, 100)) +
   labs(title = "Who Do Directors Report To?", x = NULL, y = "Percentage (%)") +
   theme_minimal(base_size = 16) +
   theme(plot.title = element_text(face = "bold", color = aptc_navy))
@@ -589,7 +589,7 @@ pd_amount_stats <- pd_dat %>%
 ### PD Funding Summary
 
 | Statistic | Value |
-|----|----|
+|------------------------------------|------------------------------------|
 | N | `r pd_amount_stats$N` |
 | Mean | `r dollar(round(pd_amount_stats$Mean))` |
 | Median | `r dollar(round(pd_amount_stats$Median))` |
@@ -609,8 +609,8 @@ Most directors receive some form of professional development funding. The median
 
 ```{r}
 funding_labels <- c(
-  "FundingSrc_1" = "Department/University",
-  "FundingSrc_2" = "College",
+  "FundingSrc_1" = "University/College",
+  "FundingSrc_2" = "Department",
   "FundingSrc_3" = "Clinic Fees",
   "FundingSrc_4" = "Individual Client Fees",
   "FundingSrc_5" = "Grants",
@@ -794,8 +794,7 @@ ggplot(staff_presence, aes(x = reorder(`Staff Type`, Percentage), y = Percentage
 ```
 
 ::: notes
-About half of clinics report having support staff (57%) or graduate staff (50%). 
-Fewer have undergraduate staff (29%), and postdoctoral trainees remain rare (7%).
+About half of clinics report having support staff (57%) or graduate staff (50%). Fewer have undergraduate staff (29%), and postdoctoral trainees remain rare (7%).
 :::
 
 ## Director Responsibilities
@@ -904,7 +903,7 @@ dat %>%
   geom_histogram(binwidth = 2, fill = aptc_coral, color = "white", alpha = 0.9) +
   geom_vline(aes(xintercept = median(MaxTraineeCount)), color = aptc_navy,
              linetype = "dashed", linewidth = 1.2) +
-  labs(title = "Max Trainees per Supervisor",
+  labs(title = "Max Trainees per Director",
        subtitle = paste0("Median = ", supervisor_stats$Median),
        x = "Number of Trainees", y = "Count") +
   theme_minimal(base_size = 14) +
@@ -1018,6 +1017,7 @@ Median clinic revenue is approximately \$44,000, though there is substantial var
 :::
 
 ## Fee Structures
+
 ```{r}
 fee_wide <- function(vars, service_name) {
   dat %>%
@@ -1084,13 +1084,13 @@ Assessment fees are considerably higher than therapy fees. Most clinics use slid
 ## Insurance Billing
 
 ```{r}
-if ("ClinicBillBinary" %in% names(dat)) {
+if ("InsuranceBinary" %in% names(dat)) {
   insur_summary <- dat %>%
-    filter(!is.na(ClinicBillBinary)) %>%
-    count(ClinicBillBinary) %>%
+    filter(!is.na(InsuranceBinary)) %>%
+    count(InsuranceBinary) %>%
     mutate(Percentage = round(100 * n / sum(n), 1))
 
-  ggplot(insur_summary, aes(x = ClinicBillBinary, y = Percentage, fill = ClinicBillBinary)) +
+  ggplot(insur_summary, aes(x = InsuranceBinary, y = Percentage, fill = InsuranceBinary)) +
     geom_col(show.legend = FALSE) +
     geom_text(aes(label = paste0(n, " (", Percentage, "%)")), vjust = -0.3, size = 6) +
     scale_y_continuous(limits = c(0, 100)) +
@@ -1464,11 +1464,11 @@ The same aspects of the job that directors find positive can also contribute to 
 
 ## Burnout & Satisfaction
 
-::: {style="font-size: 0.82em;"}
-::::: columns
-::: {.column width="45%"}
-
+::::::::: {style="font-size: 0.82em;"}
+:::::::: columns
+:::: {.column width="45%"}
 #### Burnout {style="color: #ff6544;"}
+
 ```{r}
 burnout_composite <- dat %>%
   mutate(Burnout_Composite = rowMeans(
@@ -1499,28 +1499,26 @@ On a 5-item scale (0–6), directors averaged **`r burnout_composite$Mean`** (SD
 ::: {.callout-note style="font-size: 0.75em;"}
 2026 uses 5-item CBI for greater reliability. Prior year single-item mean = 3.36 (SD = 1.43).
 :::
+::::
 
-:::
-
-::: {.column width="55%"}
-
+::::: {.column width="55%"}
 ::: {.callout-tip appearance="minimal" style="font-size: 0.72em;"}
 Special shoutout to the person who put *"decreasing how many f\*cks I give every year"* 🌟
 :::
+
 ::: {style="font-size: 0.72em;"}
 #### What Helps Us Overcome Burnout? {style="color: #252b3b;"}
 
-- **Professional lifelines** — APTC colleagues, peer consultation, mentorship
-- **Saying "No"** — strategic refusal, digital detox, protected time
-- **Flexibility & autonomy** — remote work, environment shifts, self-set hours
-- **Self-care** — personal therapy, external identities, humor & hobbies
-- **Practical realities** — salary, benefits, retirement vesting
-- **Systemic problem solving** — workable systems, delegating, advocacy
-:::
-
+-   **Professional lifelines** — APTC colleagues, peer consultation, mentorship
+-   **Saying "No"** — strategic refusal, digital detox, protected time
+-   **Flexibility & autonomy** — remote work, environment shifts, self-set hours
+-   **Self-care** — personal therapy, external identities, humor & hobbies
+-   **Practical realities** — salary, benefits, retirement vesting
+-   **Systemic problem solving** — workable systems, delegating, advocacy
 :::
 :::::
-:::
+::::::::
+:::::::::
 
 ::: notes
 The 2026 survey moved to a 5-item CBI composite for greater reliability. Single-item comparison to prior year available via Burnout_1. BurnoutOvercome open-ended themes summarized in bullets.
@@ -1528,7 +1526,7 @@ The 2026 survey moved to a 5-item CBI composite for greater reliability. Single-
 
 ## Overcoming Burnout: Major Themes (1/2)
 
-::: {style="font-size: 0.78em;"}
+:::::: {style="font-size: 0.78em;"}
 ::::: columns
 ::: {.column width="50%"}
 **1. Professional Lifelines & Community**
@@ -1550,11 +1548,11 @@ Autonomy over hours and remote work are major reasons for staying. Many gain per
 Personal therapy, decoupling identity from job title, investing in hobbies and humor outside psychology.
 :::
 :::::
-:::
+::::::
 
 ## Overcoming Burnout: Major Themes (2/2)
 
-::: {style="font-size: 0.78em;"}
+:::::: {style="font-size: 0.78em;"}
 ::::: columns
 ::: {.column width="50%"}
 **5. Practical & Financial Realities**
@@ -1568,7 +1566,8 @@ Salary, benefits, and retirement vesting are honest stabilizing factors. A few n
 Building workable systems, delegating to administrative staff, refusing new initiatives until core needs are met.
 :::
 :::::
-:::
+::::::
+
 ## Additional Burnout Information
 
 ![](aptc_2026_presentation_expanded_files/burnoutQR.png)
@@ -1577,14 +1576,12 @@ Building workable systems, delegating to administrative staff, refusing new init
 Scan for more of what y'all had to say about burnout.
 :::
 
-
 # Summary {background-color="#252b3b"}
 
 ## Key Takeaways
 
 ::::: columns
 ::: {.column width="50%"}
-
 ### Sample & Position
 
 -   **`r nrow(dat)`** respondents; mostly faculty
@@ -1638,6 +1635,7 @@ survey_length <- dat %>%
 ```
 
 **Was the survey too long?**
+
 ```{r}
 survey_length %>%
   kable(col.names = c("Response", "N", "%")) %>%
@@ -1646,26 +1644,26 @@ survey_length %>%
 
 **Other feedback**
 
-- Carry forward stable data year-to-year; alternate AI & DEI questions
-- Permanent clinic profiles for space, services, funding — updated as needed
-- Some quantitative items could rotate every other year
+-   Carry forward stable data year-to-year; alternate AI & DEI questions
+-   Permanent clinic profiles for space, services, funding — updated as needed
+-   Some quantitative items could rotate every other year
 :::
 
 ::: {.column width="50%"}
 **What do you want to see more of?**
 
-- Student caseload for therapy and assessment
-- Stipends, course release, and summer salary detail
-- Data breakdowns by clinic size
-- Autonomy in decision-making vs. faculty approval
-- Assessment practices and report writing styles
-- Digital therapeutics and client AI use
+-   Student caseload for therapy and assessment
+-   Stipends, course release, and summer salary detail
+-   Data breakdowns by clinic size
+-   Autonomy in decision-making vs. faculty approval
+-   Assessment practices and report writing styles
+-   Digital therapeutics and client AI use
 
 **What do you want to see less of?**
 
-- Space/square footage (*"Girl, no. Do most people know the square footage of their clinic?"*)
-- Detailed clinic operations — too varied to be useful across clinics
-- Going back to calculate prior year numbers under time pressure
+-   Space/square footage (*"Girl, no. Do most people know the square footage of their clinic?"*)
+-   Detailed clinic operations — too varied to be useful across clinics
+-   Going back to calculate prior year numbers under time pressure
 :::
 :::::
 
@@ -1674,10 +1672,7 @@ survey_length %>%
 ![](aptc_2026_presentation_expanded_files/25-26.png){width="95%"}
 
 ::: {.callout-note style="font-size: 0.7em;"}
-Key clinic metrics show minimal year-to-year change — consistent with sampling 
-variability rather than true shifts. Member feedback echoes this. A full survey 
-every 2–3 years with a short annual pulse on fast-moving topics (AI, DEI, burnout) 
-may better respect member time while preserving data quality.
+Key clinic metrics show minimal year-to-year change — consistent with sampling variability rather than true shifts. Member feedback echoes this. A full survey every 2–3 years with a short annual pulse on fast-moving topics (AI, DEI, burnout) may better respect member time while preserving data quality.
 :::
 
 ##  {background-color="white"}
@@ -1702,21 +1697,15 @@ Richard will help manage the room!
 
 ::::: columns
 ::: {.column width="60%"}
-**Jackie Hersh, Ph.D.**
-Research Committee Co-Chair
-[hershjr@appstate.edu](mailto:hershjr@appstate.edu)
+**Jackie Hersh, Ph.D.** Research Committee Co-Chair [hershjr\@appstate.edu](mailto:hershjr@appstate.edu)
 
-&nbsp;
+ 
 
-**Ryan L. Farmer, Ph.D.**
-Research Committee Co-Chair
-[rlfarmer@memphis.edu](mailto:rlfarmer@memphis.edu)
+**Ryan L. Farmer, Ph.D.** Research Committee Co-Chair [rlfarmer\@memphis.edu](mailto:rlfarmer@memphis.edu)
 
-&nbsp;
+ 
 
-**Richard LeBeau, Ph.D.**<br>
-Research Committee Member
-[rlebeau@ucla.edu](mailto:rlebeau@ucla.edu)
+**Richard LeBeau, Ph.D.**<br> Research Committee Member [rlebeau\@ucla.edu](mailto:rlebeau@ucla.edu)
 :::
 
 ::: {.column width="40%"}
