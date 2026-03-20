@@ -1234,6 +1234,14 @@ Most clinics do not yet have a formal AI policy. Many noted this is an upcoming 
 The absence of formal AI policies mirrors broader trends in healthcare and academia. Clinics are navigating this space carefully, balancing innovation with ethical training considerations.
 :::
 
+## Additional AI Information
+
+![](aptc_2026_presentation_expanded_files/aiQR.png)
+
+::: {.callout-note style="font-size: 0.7em;"}
+Scan for more of what y'all had to say about AI.
+:::
+
 ## Routine Outcome Monitoring (ROM)
 
 ```{r}
@@ -1492,10 +1500,6 @@ On a 5-item scale (0–6), directors averaged **`r burnout_composite$Mean`** (SD
 2026 uses 5-item CBI for greater reliability. Prior year single-item mean = 3.36 (SD = 1.43).
 :::
 
-![](aptc_2026_presentation_expanded_files/burnoutQR.png){width="90px"}
-
-[Scan for full responses]{style="font-size: 0.65em;"}
-
 :::
 
 ::: {.column width="55%"}
@@ -1565,6 +1569,14 @@ Building workable systems, delegating to administrative staff, refusing new init
 :::
 :::::
 :::
+## Additional Burnout Information
+
+![](aptc_2026_presentation_expanded_files/burnoutQR.png)
+
+::: {.callout-note style="font-size: 0.7em;"}
+Scan for more of what y'all had to say about burnout.
+:::
+
 
 # Summary {background-color="#252b3b"}
 
